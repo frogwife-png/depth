@@ -32,6 +32,10 @@
 <body>
 <div id="dmRoot"></div>
 <div class="modal-bg" id="aiModal" style="display:none;z-index:90"></div>
+<div class="modal-bg" id="cfm" style="display:none;z-index:90"><div class="dialog" style="width:440px;padding:24px 26px">
+ <h3 style="font-size:18px;margin-bottom:8px">채점 완료</h3>
+ <p style="color:#374151;font-size:14.5px;line-height:1.7;margin-bottom:20px">이 답안을 제출 완료로 표시합니다. 목록에서 본채점 전체를 완료하기 전까지 다시 수정할 수 있습니다.</p>
+ <div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn" id="cfmNo">취소</button><button class="btn red" id="cfmYes">예, 완료</button></div></div></div>
 <script src="assets/cfg.js"></script>
 <script src="assets/app.js"></script>
 <script>
@@ -68,11 +72,11 @@ function dmHTML(d){
  </div></div>
  <div class="dm-side"><div class="hd">채점</div><div class="bd"><div class="dm-q"><div class="qh">문항 1 <b>${total(sel)} / 10</b></div>
   ${EL.map((e,ei)=>`<div class="dm-el ${sel[ei]==null?'cur':''}" id="el${ei}"><div class="eh"><span>${e.name} <small>(${e.pt}점)</small></span><b>${sel[ei]==null?0:e.p[sel[ei]]}점</b></div>
-   ${[0,1,2].map(li=>`<button class="dm-lv ${sel[ei]===li?'sel':''}" data-el="${ei}" data-lv="${li}" ${done?'disabled':''}><span>${e.c[li]}</span><b>${e.p[li]}점</b></button>`).join('')}</div>`).join('')}
+   ${[0,1,2].map(li=>`<button class="dm-lv ${sel[ei]===li?'sel':''}" data-el="${ei}" data-lv="${li}"><span>${e.c[li]}</span><b>${e.p[li]}점</b></button>`).join('')}</div>`).join('')}
   </div></div>
   <div class="ft"><div class="lbl2">채점 결과 저장</div>
    <button class="tmp" data-blocked="임시저장" ${done?'disabled':''}>${I('save','sm')} 임시저장</button>
-   ${done?`<button class="tmp" id="btnAiView">${I('eye','sm')} AI 채점 확인</button><button class="done" disabled>${I('lock','sm')} 본채점 완료 · 수정 불가</button>`:`<button class="done" id="btnDone" ${(sel.every(v=>v!=null)&&d.cmt.trim().length>=2)?'':'disabled'}>${I('send','sm')} 채점 완료</button>`}
+   ${done?`<button class="tmp" id="btnAiView">${I('eye','sm')} AI 채점 확인</button><button class="done" disabled style="background:#16a34a">${I('check','sm')} 제출 완료</button><div class="lock-note">수준을 다시 고르면 수정할 수 있습니다 · 본채점 전체 완료 전까지</div>`:`<button class="done" id="btnDone" ${(sel.every(v=>v!=null)&&d.cmt.trim().length>=2)?'':'disabled'}>${I('send','sm')} 채점 완료</button>`}
   </div></div>
  <div class="dm-status"><span>${I('save','xs')} Auto-saved: ${done?'방금':'--:--:--'}</span><span>${I('hl','xs')} Annotations: ${d.cmtSaved?2:1}</span><span>${I('file','xs')} Role: 채점교사 · 1차 본채점</span></div></div>`;
 }
@@ -83,7 +87,7 @@ function aiHTML(d){
   ${EL.map((e,i)=>{const same=AI.lv[i]===sel[i];return `<div class="ai-el ${same?'same':'diff'}"><h5>${i+1}. ${e.name} ${same?'<span class="pill ok">교사 점수와 같음</span>':'<span class="pill blue">교사 점수와 다름 · 참고</span>'}</h5>
    ${same?`<div class="row"><span>교사 점수</span><span><b>${LV[sel[i]]} · ${e.p[sel[i]]}점</b> — 같은 판단이라 AI 점수는 따로 표시하지 않습니다.</span></div>`:
    `<div class="row"><span>교사 점수</span><span><b>${LV[sel[i]]} · ${e.p[sel[i]]}점</b></span></div><div class="row"><span>AI 선택 기준</span><span>${LV[AI.lv[i]]} · ${e.p[AI.lv[i]]}점 — ${e.c[AI.lv[i]]}</span></div><div class="row"><span>AI 채점 근거</span><span>${AI.why[i]}</span></div>`}</div>`}).join('')}
-  <div style="margin-top:10px;font-size:13px;color:#475569;display:flex;gap:6px;align-items:center">${I('help','sm')} AI의 점수와 근거는 참고 자료입니다. 최종 판단은 교사가 합니다.</div>
+  <div style="margin-top:10px;font-size:13px;color:#475569;display:flex;gap:6px;align-items:center">${I('help','sm')} AI의 점수와 근거는 참고 자료입니다. 최종 판단은 교사가 하며, 본채점 전체를 완료하기 전까지 점수를 다시 고칠 수 있습니다.</div>
   <div class="seed ${seedOk?'':'bad'}"><h4>${I('target','sm')} 선임채점관 화면 · 시드 기반 상시 모니터링 <span class="pill gray" style="margin-left:auto">관리자 화면 예시</span></h4>
    <div style="font-size:13.5px;color:#374151;margin-top:6px">방금 채점한 답안은 <b>시드답안(점검용 답안)</b>이었습니다. 채점교사 화면에는 표시되지 않고, 선임채점관만 기준과의 일치를 확인합니다.</div>
    <div class="grid"><div>시드 기준점수<b>${seedScore}점</b></div><div>박시현 채점<b>${my}점</b></div><div>판정<b style="color:${seedOk?'#227356':'#c0392b'}">${seedOk?'일치 · 채점 계속':'차이 · 확인 필요'}</b></div></div>
@@ -93,11 +97,11 @@ function aiHTML(d){
 
 function render(s){
  const d=s.data; document.getElementById('dmRoot').innerHTML=dmHTML(d);
- document.querySelectorAll('.dm-lv').forEach(b=>b.onclick=()=>{if(D.done)return;const ei=+b.dataset.el,li=+b.dataset.lv;D.sel[ei]=li;Demo.save();render(S);
-  const n=D.sel.filter(v=>v!=null).length;Demo.step(Math.min(4,1+n));const nx=D.sel.findIndex(v=>v==null);if(nx>=0)Demo.coach('#el'+nx);else if(!D.cmtSaved)Demo.coach('#cmt');});
+ document.querySelectorAll('.dm-lv').forEach(b=>b.onclick=()=>{if(D.done){D.done=false;D.reedit=true;Demo.toast('채점을 수정합니다 · 다시 ‘채점 완료’를 눌러 주세요')}const ei=+b.dataset.el,li=+b.dataset.lv;D.sel[ei]=li;Demo.save();render(S);
+  const n=D.sel.filter(v=>v!=null).length;if(!D.reedit)Demo.step(Math.min(4,1+n));const nx=D.sel.findIndex(v=>v==null);if(nx>=0)Demo.coach('#el'+nx);else if(!D.cmtSaved)Demo.coach('#cmt');else Demo.coach('#btnDone');});
  const c=document.getElementById('cmt');
  if(c){c.addEventListener('input',e=>{D.cmt=e.target.value;Demo.save();document.getElementById('btnDone').disabled=D.cmt.trim().length<2});Demo.onEnter(c,()=>{if(D.cmt.trim().length<2){Demo.toast('판단 근거를 입력해 주세요');return}Demo.step(5);c.blur()});}
- const bd=document.getElementById('btnDone'); if(bd) bd.onclick=()=>{if(D.cmt.trim().length<2){Demo.toast('판단 근거 코멘트를 입력해 주세요');return}D.cmtSaved=true;D.done=true;Demo.save();Demo.toast('본채점을 완료했습니다 · 채점 결과가 잠깁니다');render(S);Demo.step(6)};
+ const bd=document.getElementById('btnDone'); if(bd) bd.onclick=()=>{if(D.sel.some(v=>v==null)){Demo.toast('세 평가요소의 수준을 모두 골라 주세요');return}if(D.cmt.trim().length<2){Demo.toast('판단 근거 코멘트를 입력해 주세요');return}document.getElementById('cfm').style.display='grid';Demo.step(6)};
  const av=document.getElementById('btnAiView'); if(av) av.onclick=openAI;
 }
 function openAI(){const m=document.getElementById('aiModal');m.innerHTML=aiHTML(D);m.style.display='grid';document.getElementById('aiClose').onclick=()=>{m.style.display='none';if(!S.finished)Demo.finish()}}
@@ -107,6 +111,8 @@ Demo.init(Object.assign({},BOOTH_CFG,{home:'index.html',noShell:true,
  render:s=>{window.S=s;window.D=s.data;render(s)}
 }));
 const S=Demo.state, D=S.data;
+document.getElementById('cfmNo').onclick=()=>{document.getElementById('cfm').style.display='none'};
+document.getElementById('cfmYes').onclick=()=>{document.getElementById('cfm').style.display='none';D.cmtSaved=true;D.done=true;Demo.save();Demo.toast('이 답안을 제출 완료로 표시했습니다');render(S);Demo.step(7)};
 if(!D.done){const nx=D.sel.findIndex(v=>v==null);if(nx>=0&&S.started)Demo.coach('#el'+nx,false)}
 })();
 </script>
