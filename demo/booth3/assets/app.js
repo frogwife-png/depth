@@ -87,31 +87,27 @@ K.setShell=function(o){
  if(o.crumb||o.user) hd.innerHTML=headerHTML(o.crumb||cfg.crumb,o.user||cfg.user);
 };
 
-K.toast=function(msg){let t=document.querySelector('.toast');if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t)}t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200)};
+K.toast=function(msg){let t=document.querySelector('.dx-toast');if(!t){t=document.createElement('div');t.className='dx-toast';document.body.appendChild(t)}t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200)};
 
 /* 안내 띠 */
 function renderGuide(){
- const g=document.querySelector('.guide'); if(!g) return;
+ const g=document.querySelector('.dx-guide'); if(!g) return;
  const n=cfg.steps.length, s=Math.min(state.step,n-1), st=cfg.steps[s];
  const done=state.finished;
- g.innerHTML=`<div class="badge">${cfg.letter}</div>
- <div class="txt"><div class="k">${cfg.boothName} · ${done?'완료':`${s+1} / ${n}`}</div>
- <div class="t">${done?'모든 단계를 마쳤습니다. 화면을 자유롭게 살펴보세요':`${st.input?'<em>직접 입력해 보세요</em>':''}${st.text}`}</div></div>
- <div class="dots">${cfg.steps.map((_,i)=>`<i class="${(i<state.step||done)?'on':''}"></i>`).join('')}</div>
- <div class="principle">AI가 돕고, 교사가 판단합니다</div>
- <div class="timer">${icon('clock','xs')} <span id="tmr">5:00</span></div>`;
- tick();
+ g.innerHTML=`<div class="dxg-badge">${cfg.letter}</div>
+ <div class="dxg-txt"><div class="dxg-k">${cfg.boothName} · ${done?'완료':`${s+1} / ${n}`}</div>
+ <div class="dxg-t">${done?'모든 단계를 마쳤습니다. 화면을 살펴본 뒤 ‘체험 마치기’를 눌러 주세요':`${st.input?'<em>직접 입력해 보세요</em>':''}${st.text}${st.input?' <small>입력 후 Enter 키</small>':''}`}</div></div>
+ <div class="dxg-dots">${cfg.steps.map((_,i)=>`<i class="${(i<state.step||done)?'on':''}"></i>`).join('')}</div>
+ <div class="dxg-principle">AI가 돕고, 교사가 판단합니다</div>
+ ${done?`<button class="dxg-finish" id="dxFinish">체험 마치기 ${icon('arrowR','sm')}</button>`:''}`;
+ const f=document.getElementById('dxFinish'); if(f) f.onclick=()=>showFinish();
 }
-function tick(){
- const el=document.getElementById('tmr'); if(!el||!state.startedAt) return;
- const left=300-Math.floor((Date.now()-state.startedAt)/1000);
- const a=Math.abs(left); el.textContent=(left<0?'+':'')+Math.floor(a/60)+':'+String(a%60).padStart(2,'0');
- el.parentElement.style.background=left<0?'rgba(232,53,43,.55)':left<60?'rgba(0,0,0,.3)':'';
-}
+/* 텍스트 입력: Enter 키를 눌러야 다음 단계로 (한글 조합 중 Enter 는 무시, Shift+Enter 는 줄바꿈) */
+K.onEnter=function(el,cb){ if(!el) return; el.addEventListener('keydown',e=>{ if(e.key!=='Enter'||e.shiftKey||e.isComposing||e.keyCode===229) return; e.preventDefault(); cb(e); }); };
 
 /* 코치 표시 */
 function placeCoach(){
- const ring=document.querySelector('.coach-ring'), tip=document.querySelector('.coach-tip');
+ const ring=document.querySelector('.dx-coach-ring'), tip=document.querySelector('.dx-coach-tip');
  const el=coachTarget&&document.querySelector(coachTarget);
  if(!el||state.finished||!state.started||el.offsetParent===null){ring.style.display='none';tip.style.display='none';coachRaf=requestAnimationFrame(placeCoach);return}
  const r=el.getBoundingClientRect(), pad=6;
@@ -128,19 +124,19 @@ function placeCoach(){
 K.coach=function(sel,scroll=true){coachTarget=sel; if(scroll&&sel){const el=document.querySelector(sel); if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'center'}),60)}};
 
 K.step=function(n){ if(n>state.step){state.step=n; save();} renderGuide(); const st=cfg.steps[state.step]; K.coach(st?st.target:null, true); };
-K.finish=function(delay){state.finished=true; save(); renderGuide(); K.coach(null); if(delay!==false) setTimeout(showFinish,delay||cfg.finishDelay||900)};
+K.finish=function(){state.finished=true; save(); renderGuide(); K.coach(null)};
 K.showFinish=()=>showFinish();
 function showFinish(){
- const c=document.querySelector('.cover'); c.classList.remove('hidden');
- c.innerHTML=`<div class="cover-card"><img src="assets/${cfg.img}" alt="디피 ${cfg.letter}">
+ const c=document.querySelector('.dx-cover'); c.classList.remove('hidden');
+ c.innerHTML=`<div class="dx-cover-card"><img src="assets/${cfg.img}" alt="디피 ${cfg.letter}">
  <div><div class="bk"><b>${cfg.letter}</b>${cfg.boothName}</div><h1>${cfg.finishTitle}</h1><p>${cfg.finishDesc}</p>
  <ol><li><span>✓</span>리플릿에 디피 ${cfg.letter} 스티커를 받아 가세요</li>${cfg.next?`<li><span>→</span>다음 부스: ${cfg.next}</li>`:''}</ol>
  <button class="go" id="seeResult">${icon('eye')} 내 화면 다시 보기</button></div></div>`;
  document.getElementById('seeResult').onclick=()=>c.classList.add('hidden');
 }
 function showStart(){
- const c=document.querySelector('.cover'); c.classList.remove('hidden');
- c.innerHTML=`<div class="cover-card"><img src="assets/${cfg.img}" alt="디피 ${cfg.letter}">
+ const c=document.querySelector('.dx-cover'); c.classList.remove('hidden');
+ c.innerHTML=`<div class="dx-cover-card"><img src="assets/${cfg.img}" alt="디피 ${cfg.letter}">
  <div><div class="bk"><b>${cfg.letter}</b>${cfg.boothName}</div><h1>${cfg.startTitle}</h1><p>${cfg.startDesc}</p>
  <ol>${cfg.steps.map((s,i)=>`<li><span>${i+1}</span>${s.short}</li>`).join('')}</ol>
  <button class="go" id="goStart">시작하기 ${icon('arrowR')}</button>
@@ -150,23 +146,24 @@ function showStart(){
 
 /* 운영자 초기화: 오른쪽 아래 버튼 1.2초 길게 누르기 또는 Ctrl+Alt+R */
 function setupReset(){
- const b=document.createElement('button'); b.className='op-reset'; b.title='운영자 초기화(길게 누르기)'; b.innerHTML='<span class="fill"></span>'+icon('reset','sm'); document.body.appendChild(b);
- const m=document.createElement('div'); m.className='op-modal'; m.innerHTML=`<div class="card"><h4>다음 체험자를 위해 초기화할까요?</h4><p>이 부스에서 입력한 내용이 모두 지워지고 시작 화면으로 돌아갑니다.</p><div class="row"><button class="btn" id="opNo">취소</button><button class="btn red" id="opYes">${icon('reset','sm')} 초기화</button></div></div>`; document.body.appendChild(m);
+ const b=document.createElement('button'); b.className='dx-op-reset'; b.title='운영자 초기화(길게 누르기)'; b.innerHTML='<span class="fill"></span>'+icon('reset','sm'); document.body.appendChild(b);
+ const m=document.createElement('div'); m.className='dx-op-modal'; m.innerHTML=`<div class="card"><h4>다음 체험자를 위해 초기화할까요?</h4><p>이 부스에서 입력한 내용이 모두 지워지고 시작 화면으로 돌아갑니다.</p><div class="row"><button class="dxb" id="opNo">취소</button><button class="dxb red" id="opYes">${icon('reset','sm')} 초기화</button></div></div>`; document.body.appendChild(m);
  let h; const start=e=>{e.preventDefault();b.classList.add('hold');h=setTimeout(()=>{b.classList.remove('hold');m.classList.add('show')},1200)}, stop=()=>{b.classList.remove('hold');clearTimeout(h)};
  b.addEventListener('pointerdown',start);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
  document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&(e.key==='r'||e.key==='R'||e.code==='KeyR')){e.preventDefault();m.classList.add('show')}});
  m.querySelector('#opNo').onclick=()=>m.classList.remove('show');
  m.querySelector('#opYes').onclick=()=>{K.reset()};
 }
-K.reset=function(){try{Object.keys(localStorage).filter(k=>k.startsWith(cfg.key)).forEach(k=>localStorage.removeItem(k))}catch(e){} location.reload()};
+K.reset=function(){try{Object.keys(localStorage).filter(k=>k.startsWith(cfg.key)).forEach(k=>localStorage.removeItem(k))}catch(e){} if(cfg.home) location.href=cfg.home; else location.reload()};
 
 K.init=function(c){
  cfg=c;
+ if(c.home){const pre=load(); if(!pre||!pre.started||pre.step<(c.minStep||1)){location.replace(c.home);return}}
  const def={step:0,started:false,startedAt:0,finished:false,data:JSON.parse(JSON.stringify(c.defaults||{}))};
- state=Object.assign(def,load()||{});
+ {const ld=load()||{}; const dd=Object.assign(def.data,ld.data||{}); state=Object.assign(def,ld); state.data=dd;}
  document.documentElement.style.setProperty('--bc',c.color);
  if(c.noShell) document.body.classList.add('no-shell'); else document.body.insertAdjacentHTML('afterbegin',`<aside class="app-sidebar"></aside><header class="app-header"></header>`);
- document.body.insertAdjacentHTML('beforeend',`<div class="guide"></div><div class="coach-ring"></div><div class="coach-tip"></div><div class="cover hidden"></div>`);
+ document.body.insertAdjacentHTML('beforeend',`<div class="dx-guide"></div><div class="dx-coach-ring"></div><div class="dx-coach-tip"></div><div class="dx-cover hidden"></div>`);
  if(!c.noShell) K.setShell({sidebar:c.sidebar,crumb:c.crumb,user:c.user});
  document.addEventListener('click',e=>{const t=e.target.closest('[data-blocked]'); if(t){e.preventDefault();K.toast(`이 부스에서는 '${c.screenName}' 화면만 다룹니다`)}},true);
  setupReset();
@@ -175,8 +172,8 @@ K.init=function(c){
  renderGuide();
  if(!state.started) showStart(); else if(state.finished) {K.coach(null)} else K.coach(c.steps[state.step].target,false);
  placeCoach();
- timerIv=setInterval(tick,1000);
 };
+K.go=function(url,step){ if(step>state.step){state.step=step} save(); location.href=url };
 K.icon=icon;
 K.esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 K.wait=ms=>new Promise(r=>setTimeout(r,ms));
