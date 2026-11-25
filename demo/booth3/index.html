@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>채점도구 | 대구형평가플랫폼</title>
+<link rel="icon" href="assets/logo.svg">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+.cmt-box{position:relative;margin-top:26px;display:flex;gap:14px;align-items:flex-start}
+.cmt-card{flex:1;border:1.5px solid #f3b4ae;border-radius:12px;background:#fff;padding:10px 12px;box-shadow:0 8px 18px -12px rgba(232,53,43,.5)}
+.cmt-card .h{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#b91c1c;font-weight:700;margin-bottom:6px}
+.cmt-card textarea{width:100%;border:1px solid #f3d0cc;border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.6;outline:none;resize:none;min-height:62px}
+.cmt-card textarea:focus{border-color:#e8352b;box-shadow:0 0 0 3px rgba(232,53,43,.12)}
+.cmt-card .saved{font-size:14px;line-height:1.6;color:#374151}
+.lead{display:flex;align-items:center;gap:6px;color:#e8352b;font-weight:700;font-size:14px;margin-top:6px}
+.ai-modal{width:min(880px,calc(100vw - 80px));max-height:calc(100vh - 140px);overflow:auto;padding:22px 26px}
+.ai-modal .hd{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.ai-modal h3{font-size:19px}
+.conf{margin-left:auto;font-size:12.5px;font-weight:700;color:#4f46e5;border:1px solid #c7d2fe;background:#eef2ff;border-radius:20px;padding:4px 12px}
+.ai-el{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px}
+.ai-el h5{font-size:14px;display:flex;align-items:center;gap:8px}
+.ai-el .row{display:grid;grid-template-columns:96px 1fr;gap:8px;font-size:13.5px;padding:3px 0;color:#374151}
+.ai-el .row span:first-child{color:#64748b}
+.ai-el.same{background:#fafbfc}
+.ai-el.diff{border-color:#c7d2fe;background:#f8f9ff}
+.seed{margin-top:16px;border:1.5px dashed #86c5a6;border-radius:12px;padding:14px 16px;background:#f3fbf6}
+.seed.bad{border-color:#f3b4ae;background:#fff7f6}
+.seed h4{font-size:15px;display:flex;gap:8px;align-items:center}
+.seed .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.seed .grid div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#64748b}
+.seed .grid b{display:block;font-size:20px;color:#111827;margin-top:2px}
+.lock-note{display:flex;gap:6px;align-items:center;justify-content:center;color:#6b7280;font-size:12.5px;margin-top:8px}
+</style></head>
+<body>
+<div id="dmRoot"></div>
+<div class="modal-bg" id="aiModal" style="display:none;z-index:90"></div>
+<script src="assets/app.js"></script>
+<script>
+(function(){
+const I=Demo.icon, esc=Demo.esc, LV=['상','중','하'];
+const EL=[
+ {name:'핵심 개념과 조건 이해',pt:4,c:['화자의 태도를 한 가지로 정확히 정리하고 문항 조건을 모두 지킨다.','화자의 태도를 정리했지만 조건 일부가 빠져 있다.','화자의 태도를 파악하기 어렵다.'],p:[4,2,0]},
+ {name:'근거 또는 풀이 과정',pt:3,c:['지문에서 근거 두 가지를 찾아 태도와 정확히 연결한다.','근거를 하나만 들었거나 태도와의 연결이 부족하다.','지문에서 근거를 찾지 못했다.'],p:[3,1,0]},
+ {name:'결론의 타당성과 표현',pt:3,c:['판단 과정이 자연스럽고 표현이 정확하다.','결론은 타당하지만 근거와의 연결이나 표현을 보완해야 한다.','결론과 근거가 연결되지 않는다.'],p:[3,1,0]}
+];
+const SEED=[0,1,1]; // 시드답안 기준점수(책임 선임채점관): 상·중·중 = 6점
+const AI={lv:[0,1,1],why:[
+ '‘슬프지만 종이배처럼 버티려는 태도’로 화자의 태도를 한 가지로 정리했고, 문항 조건을 지켰습니다.',
+ '흙 냄새와 종이배 장면을 근거로 들었지만, 각 근거가 태도와 어떻게 이어지는지 설명이 부족합니다.',
+ '결론은 타당하나 마지막 문장이 판단 근거와 직접 연결되지 않습니다.']};
+const ANS=['화자는 잃어버린 우산을 생각해 조금 슬프지만 ','종이배처럼 버티려는 태도이다.',' 흙 냄새와 종이배 장면이 그 근거라고 생각한다. 판단한 순서는 지문의 장면 순서대로 남겨 두었습니다.'];
+
+function total(sel){return sel.reduce((a,v,i)=>a+(v==null?0:EL[i].p[v]),0)}
+function dmHTML(d){
+ const sel=d.sel, done=d.done;
+ return `<div class="dm">
+ <div class="dm-top"><img src="assets/logo.svg" alt="DEPTH"><span class="pill" style="background:#1f2937;color:#fff">1차 본채점</span>
+  <div class="nav">${I('chevL','sm')}<b>1번</b><span class="mute">2 / 6</span>${I('chevR','sm')}<span class="st" style="margin-left:10px">${I('list','sm')} 현황 <span class="g">✓1</span> <span class="o">◌2</span></span><span class="st" style="margin-left:10px">${I('clip','sm')} 이력보기</span></div>
+  <div class="meta"><span>시행: <b>[교육청연합] 2026년 2학년 2학기 국어</b></span><span>문항: <b>1번</b></span><span>수험번호: <b>2026-633851-0003</b></span><span>채점자: <b>박시현</b></span></div></div>
+ <div class="dm-tool"><span class="cap">스탬프</span><span class="t" style="color:#16a34a">${I('check')}</span><span class="t" style="color:#2563eb">${I('check')}</span><span class="t" style="color:#f59e0b">${I('qmark')}</span><span class="t" style="color:#e8352b">${I('x')}</span><span class="t">${I('hash')}점수</span><span class="cap">표시</span><span class="t">${I('hl')}강조</span><span class="t">${I('underline')}밑줄</span><span class="t">${I('pen')}자유선</span><span class="t ${d.sel.every(v=>v!=null)&&!d.cmtSaved?'on':''}">${I('msg')}코멘트</span><span class="t">${I('eraser')}지우개</span><span class="t">${I('hand')}이동</span></div>
+ <div class="dm-bar">${I('undo','sm')}${I('redo','sm')}<span class="btn sm" style="height:30px">${I('book','xs')} 문항·지문</span><div class="zoom">${I('zout','sm')}<span>120%</span>${I('zin','sm')}${I('fit','sm')}${I('expand','sm')}</div></div>
+ <div class="dm-doc"><div class="dm-page"><div class="path">[교육청연합] 2026년 2학년 2학기 국어 / 1번 · 텍스트 답안</div><div class="exam">수험번호 : 2026-633851-0003</div><h2>문항 1</h2>
+  <h4>지문</h4><div class="dm-box">비가 그친 뒤 운동장에는 작은 물웅덩이가 남았다. 아이들이 띄운 종이배는 바람에 흔들렸지만 끝내 뒤집히지 않았다. 화자는 젖은 흙 냄새를 맡으며 오래전 잃어버린 우산을 떠올렸다.</div>
+  <h4>문제</h4><div class="dm-box">화자의 태도를 한 가지로 정리하고, 그렇게 판단한 근거를 두 가지 들어 설명하세요.</div>
+  <h4>학생 답안</h4><div class="dm-ans">${ANS[0]}<span class="${d.sel.every(v=>v!=null)?'u-red':''}">${ANS[1]}</span>${d.sel.every(v=>v!=null)?'<span class="dm-mark">1</span>':''}${ANS[2]}</div>
+  ${d.sel.every(v=>v!=null)?`<div class="cmt-box" id="cmtWrap"><div class="cmt-card"><div class="h">${I('msg','sm')} 코멘트 1 · 판단 근거 ${d.cmtSaved?'<span class="pill gray" style="margin-left:auto">저장됨</span>':''}</div>
+   ${d.cmtSaved||done?`<div class="saved">${esc(d.cmt)}</div>`:`<textarea id="cmt" rows="2" placeholder="밑줄 친 문장에 대한 판단 근거를 적어 주세요. 예: 태도는 분명하지만 근거와의 연결 설명이 부족함">${esc(d.cmt)}</textarea>`}</div></div>
+   <div class="lead">${I('arrowR','sm')} 문항 1 · ${EL[1].name}</div>`:''}
+ </div></div>
+ <div class="dm-side"><div class="hd">채점</div><div class="bd"><div class="dm-q"><div class="qh">문항 1 <b>${total(sel)} / 10</b></div>
+  ${EL.map((e,ei)=>`<div class="dm-el ${sel[ei]==null?'cur':''}" id="el${ei}"><div class="eh"><span>${e.name} <small>(${e.pt}점)</small></span><b>${sel[ei]==null?0:e.p[sel[ei]]}점</b></div>
+   ${[0,1,2].map(li=>`<button class="dm-lv ${sel[ei]===li?'sel':''}" data-el="${ei}" data-lv="${li}" ${done?'disabled':''}><span>${e.c[li]}</span><b>${e.p[li]}점</b></button>`).join('')}</div>`).join('')}
+  </div></div>
+  <div class="ft"><div class="lbl2">채점 결과 저장</div>
+   <button class="tmp" data-blocked="임시저장" ${done?'disabled':''}>${I('save','sm')} 임시저장</button>
+   ${done?`<button class="tmp" id="btnAiView">${I('eye','sm')} AI 채점 확인</button><button class="done" disabled>${I('lock','sm')} 본채점 완료 · 수정 불가</button>`:`<button class="done" id="btnDone" ${(sel.every(v=>v!=null)&&d.cmt.trim().length>=2)?'':'disabled'}>${I('send','sm')} 채점 완료</button>`}
+  </div></div>
+ <div class="dm-status"><span>${I('save','xs')} Auto-saved: ${done?'방금':'--:--:--'}</span><span>${I('hl','xs')} Annotations: ${d.cmtSaved?2:1}</span><span>${I('file','xs')} Role: 채점교사 · 1차 본채점</span></div></div>`;
+}
+
+function aiHTML(d){
+ const sel=d.sel, my=total(sel), seedScore=total(SEED), seedOk=sel.every((v,i)=>v===SEED[i]);
+ return `<div class="dialog ai-modal"><div class="hd"><span class="box-hd" style="padding:0;border:0"><span class="ic">${I('sparkle')}</span></span><div><h3>AI 채점 확인</h3><div style="color:#64748b;font-size:13px">수험번호 2026-633851-0003 · 교사가 채점을 마친 뒤에 열립니다</div></div><span class="conf">답안 신뢰도 90%</span></div>
+  ${EL.map((e,i)=>{const same=AI.lv[i]===sel[i];return `<div class="ai-el ${same?'same':'diff'}"><h5>${i+1}. ${e.name} ${same?'<span class="pill ok">교사 점수와 같음</span>':'<span class="pill blue">교사 점수와 다름 · 참고</span>'}</h5>
+   ${same?`<div class="row"><span>교사 점수</span><span><b>${LV[sel[i]]} · ${e.p[sel[i]]}점</b> — 같은 판단이라 AI 점수는 따로 표시하지 않습니다.</span></div>`:
+   `<div class="row"><span>교사 점수</span><span><b>${LV[sel[i]]} · ${e.p[sel[i]]}점</b></span></div><div class="row"><span>AI 선택 기준</span><span>${LV[AI.lv[i]]} · ${e.p[AI.lv[i]]}점 — ${e.c[AI.lv[i]]}</span></div><div class="row"><span>AI 채점 근거</span><span>${AI.why[i]}</span></div>`}</div>`}).join('')}
+  <div style="margin-top:10px;font-size:13px;color:#475569;display:flex;gap:6px;align-items:center">${I('help','sm')} AI의 점수와 근거는 참고 자료입니다. 최종 판단은 교사가 합니다.</div>
+  <div class="seed ${seedOk?'':'bad'}"><h4>${I('target','sm')} 선임채점관 화면 · 시드 기반 상시 모니터링 <span class="pill gray" style="margin-left:auto">관리자 화면 예시</span></h4>
+   <div style="font-size:13.5px;color:#374151;margin-top:6px">방금 채점한 답안은 <b>시드답안(점검용 답안)</b>이었습니다. 채점교사 화면에는 표시되지 않고, 선임채점관만 기준과의 일치를 확인합니다.</div>
+   <div class="grid"><div>시드 기준점수<b>${seedScore}점</b></div><div>박시현 채점<b>${my}점</b></div><div>판정<b style="color:${seedOk?'#227356':'#c0392b'}">${seedOk?'일치 · 채점 계속':'차이 · 확인 필요'}</b></div></div>
+   ${seedOk?'':'<div style="font-size:12.5px;color:#b91c1c;margin-top:8px">기준과 차이가 나면 해당 채점교사의 채점이 잠기고, 선임채점관이 근거를 검토해 해제합니다. 필요하면 교차·조정채점으로 이어 갑니다.</div>'}</div>
+  <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn primary" id="aiClose">확인</button></div></div>`;
+}
+
+function render(s){
+ const d=s.data; document.getElementById('dmRoot').innerHTML=dmHTML(d);
+ document.querySelectorAll('.dm-lv').forEach(b=>b.onclick=()=>{if(D.done)return;const ei=+b.dataset.el,li=+b.dataset.lv;D.sel[ei]=li;Demo.save();render(S);
+  const n=D.sel.filter(v=>v!=null).length;Demo.step(Math.min(3,n));const nx=D.sel.findIndex(v=>v==null);if(nx>=0)Demo.coach('#el'+nx);else if(!D.cmtSaved)Demo.coach('#cmt');});
+ const c=document.getElementById('cmt');
+ if(c){let t;c.addEventListener('input',e=>{D.cmt=e.target.value;Demo.save();document.getElementById('btnDone').disabled=D.cmt.trim().length<2;clearTimeout(t);if(D.cmt.trim().length>=2&&S.step===3)t=setTimeout(()=>Demo.step(4),1400)});}
+ const bd=document.getElementById('btnDone'); if(bd) bd.onclick=()=>{if(D.cmt.trim().length<2){Demo.toast('판단 근거 코멘트를 입력해 주세요');return}D.cmtSaved=true;D.done=true;Demo.save();Demo.toast('본채점을 완료했습니다 · 채점 결과가 잠깁니다');render(S);Demo.finish(false);setTimeout(openAI,700)};
+ const av=document.getElementById('btnAiView'); if(av) av.onclick=openAI;
+}
+function openAI(){const m=document.getElementById('aiModal');m.innerHTML=aiHTML(D);m.style.display='grid';document.getElementById('aiClose').onclick=()=>{m.style.display='none';if(!D.coverShown){D.coverShown=true;Demo.save();Demo.showFinish()}}}
+
+Demo.init({
+ key:'depth-booth3', letter:'P', color:'#2e9b76', boothName:'깊이 보다 · 본채점', screenName:'채점도구(DM)', noShell:true,
+ img:'dipi_p.png', next:'TH 깊이 잇다 · 피드백',
+ startTitle:'학생의 답안을 기준에 따라 살펴봅니다', startDesc:'채점교사가 되어 배정된 답안을 채점도구(DM)에서 채점합니다. 교사가 먼저 점수를 확정하면 AI 참고 점수와 근거가 열립니다.',
+ finishTitle:'본채점을 마쳤습니다', finishDesc:'내가 고른 수준과 코멘트로 본채점을 완료했고, AI 참고 점수와 시드답안 일치 여부까지 확인했습니다.',
+ defaults:{sel:[null,null,null],cmt:'',cmtSaved:false,done:false},
+ steps:[
+  {short:'평가요소 1의 수준을 고릅니다',text:'학생 답안을 읽고, 평가요소 1 ‘핵심 개념과 조건 이해’의 수준을 고르세요',tip:'해당하는 수준을 고르세요',target:'#el0'},
+  {short:'평가요소 2의 수준을 고릅니다',text:'평가요소 2 ‘근거 또는 풀이 과정’의 수준을 고르세요',tip:'해당하는 수준을 고르세요',target:'#el1'},
+  {short:'평가요소 3의 수준을 고릅니다',text:'평가요소 3 ‘결론의 타당성과 표현’의 수준을 고르세요',tip:'해당하는 수준을 고르세요',target:'#el2'},
+  {short:'판단 근거를 코멘트로 남깁니다',text:'밑줄 친 문장에 대한 판단 근거를 코멘트로 입력하세요',tip:'판단 근거를 직접 입력해 보세요',target:'#cmt',input:true},
+  {short:'채점 완료 → AI 참고 점수 확인',text:'‘채점 완료’를 누르면 AI 참고 점수와 근거가 열립니다',tip:'채점을 완료하세요',target:'#btnDone'}
+ ],
+ render:s=>{window.S=s;window.D=s.data;render(s)}
+});
+const S=Demo.state, D=S.data;
+if(!D.done){const nx=D.sel.findIndex(v=>v==null);if(nx>=0&&S.started)Demo.coach('#el'+nx,false)}
+else if(!D.coverShown) setTimeout(openAI,300);
+})();
+</script>
+</body></html>

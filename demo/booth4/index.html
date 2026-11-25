@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>종합 피드백 | 대구형평가플랫폼</title>
+<link rel="icon" href="assets/logo.svg">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+.infobar{display:flex;align-items:center;gap:10px;padding:16px 22px}
+.infobar b{font-size:17px;font-weight:800}.infobar .sub{color:#64748b}
+.infobar .right{margin-left:auto;color:#475569;font-size:13.5px}.infobar .right b{font-size:14px}
+.fb-grid{display:grid;grid-template-columns:330px 1fr;gap:16px;margin-top:16px;align-items:start}
+.st-list{padding:14px}
+.st-sel{width:100%;height:40px;border:1px solid var(--line-2);border-radius:10px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;color:#374151;margin-bottom:12px}
+.st-item{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;width:100%;text-align:left;background:#fff}
+.st-item:hover{border-color:#bfd3fa}
+.st-item.on{border-color:#3b76ff;box-shadow:0 0 0 2px #dbe6fe;background:#f8fbff}
+.st-item .av{width:38px;height:38px;border-radius:9px;background:#2f5596;color:#fff;font-weight:700;display:grid;place-items:center}
+.st-item b{display:block;font-size:14.5px}.st-item small{color:#6b7280;font-size:12.5px}
+.st-item .pill{margin-left:auto}
+.detail-hd{display:flex;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid var(--line-3)}
+.detail-hd .ic{width:40px;height:40px;border-radius:11px;border:1px solid #dbe6fb;background:#f5f8ff;color:#2563eb;display:grid;place-items:center}
+.detail-hd b{font-size:15.5px}.detail-hd small{display:block;color:#6b7280}
+.hist{background:#f6f8fa;border-radius:12px;padding:14px 16px;margin:16px 22px}
+.hist h5{font-size:14px;margin-bottom:8px}
+.q{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.q .qt{display:flex;justify-content:space-between;font-weight:700;font-size:13.5px}
+.q .qt span{color:#64748b;font-weight:500}
+.q .ans{background:#f6f8fa;border-radius:8px;padding:9px 12px;font-size:13.5px;margin:8px 0;color:#374151}
+.q .mini{display:grid;grid-template-columns:1fr 60px 60px;font-size:13px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.q .mini span{padding:6px 10px;border-bottom:1px solid var(--line-3);text-align:center}
+.q .mini span:nth-child(3n+1){text-align:left}
+.q .mini .h{background:#f6f8fa;font-weight:700;color:#5c6a73}
+.q .cm{background:#eaf6ef;border-radius:8px;padding:8px 12px;font-size:13px;color:#1f5f43;margin-top:8px}
+.fb{padding:4px 22px 20px}
+.fb .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.fb .top b{font-size:15px}
+.fb textarea{min-height:190px;font-size:15px;line-height:1.8}
+.fb .meta{font-size:12.5px;color:#6b7280;margin-top:6px;display:flex;gap:8px;align-items:center}
+.fb .btns{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.writing{border:1px solid var(--line);border-radius:10px;min-height:190px;display:grid;place-items:center;background:linear-gradient(110deg,#fff 30%,#f1edff 50%,#fff 70%);background-size:200% 100%;animation:shine 1.4s linear infinite}
+@keyframes shine{to{background-position:-200% 0}}
+.add-tag{font-size:11.5px;font-weight:700;color:#c2410c;background:#fff1e6;border-radius:6px;padding:2px 8px}
+/* 학생 화면 */
+.stu-card{display:flex;gap:16px;align-items:center;padding:18px 22px}
+.stu-score{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 22px 18px}
+.stu-score div{border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.stu-score small{color:#6b7280}.stu-score b{display:block;font-size:22px;margin-top:2px}
+.fb-view{margin:0 22px 22px;border:1.5px solid #c7d7fb;background:#f8fbff;border-radius:12px;padding:16px 18px;font-size:15.5px;line-height:1.85;white-space:pre-wrap}
+.fb-view mark{background:#ffedd5;color:#9a3412;border-radius:4px;padding:1px 3px}
+</style></head>
+<body>
+<main class="app-main" id="main"></main>
+<div class="modal-bg" id="confirm" style="display:none"><div class="dialog" style="width:420px;padding:22px 24px">
+ <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span class="box-hd" style="padding:0;border:0"><span class="ic" id="cfIc"></span></span><h3 style="font-size:17px">종합 피드백 작성 완료</h3></div>
+ <p style="color:#4b5563;font-size:14px;margin:4px 0 18px">최지우 학생의 종합 피드백을 저장하고 확정합니다. 확정하면 학생 화면에 공개됩니다.</p>
+ <div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn" id="cfNo">취소</button><button class="btn primary" id="cfYes">작성 완료</button></div></div></div>
+<script src="assets/app.js"></script>
+<script>
+(function(){
+const I=Demo.icon, esc=Demo.esc;
+const STU=[['김하늘','2학년 1반 1번','ok','작성완료'],['이도윤','2학년 1반 2번','ok','작성완료'],['박서연','2학년 1반 3번','warn','작성중'],['최지우','2학년 1반 4번','gray','미작성'],['정하은','2학년 1반 5번','gray','미작성']];
+const DRAFT='최지우 학생은 총점 24/30점을 받았습니다. 1번 문항은 9/10점으로, 화자의 태도를 분명하게 정리하고 근거 두 가지를 잘 연결했습니다. 2번 문항은 7/10점입니다. 근거를 관찰 자료나 사례로 보완하면 설득력이 높아집니다. 3번 문항은 8/10점으로 현실적인 대안을 제시했습니다. 2번 문항에 대해 질문하며 채점 근거를 확인한 점도 좋았습니다.';
+const Q=[['1번 · 서술형','9 / 10점','화자는 지난 일을 떠올리면서도 흔들리지 않으려는 태도를 보인다. 종이배와 젖은 흙 냄새가 그 근거이다.',[['핵심 개념과 조건 이해',4,4],['근거 또는 풀이 과정',3,3],['결론의 타당성과 표현',3,2]],'두 근거를 태도와 잘 연결했습니다.','질문 없음'],
+ ['2번 · 서술형','7 / 10점','마을 회관이 문화 교실로 바뀌어 세대 간 교류가 늘었다.',[['주장의 타당성',5,4],['근거의 적절성',5,3]],'근거를 관찰 자료나 사례로 보완하면 설득력이 높아집니다.','질문 1건 · 답변 완료']];
+
+function teacherHTML(d){
+ const list=STU.map((s,i)=>{const me=i===3;const st=me&&d.done?['ok','작성완료']:me&&d.body?['warn','작성중']:[s[2],s[3]];
+  return `<button class="st-item ${me&&d.picked?'on':''}" ${me?'id="stuJiwoo"':'data-blocked="다른 학생"'}><span class="av">${s[0][0]}</span><span><b>${s[0]}</b><small>${s[1]}</small></span><span class="pill dot ${st[0]}">${st[1]}</span></button>`}).join('');
+ const detail=d.picked?`
+  <div class="detail-hd"><span class="ic">${I('search')}</span><div><b>최지우</b><small>2학년 1반 4번 · 총점 24 / 30</small></div><span class="pill ${d.done?'ok':'gray'}" style="margin-left:auto">${d.done?'작성완료':'미작성'}</span></div>
+  <div class="hist"><h5>▾ 채점 결과·질문 이력</h5>${Q.map(q=>`<div class="q"><div class="qt">▾ ${q[0]} <span>${q[1]} · ${q[5]}</span></div><div class="ans">${q[2]}</div>
+   <div class="mini"><span class="h">평가요소</span><span class="h">득점</span><span class="h">배점</span>${q[3].map(r=>`<span>${r[0]}</span><span><b>${r[2]}</b></span><span>${r[1]}</span>`).join('')}</div><div class="cm">첨삭 코멘트 · ${q[4]}</div></div>`).join('')}</div>
+  <div class="fb"><div class="top"><b>종합 피드백</b><button class="btn ai sm" id="btnAi" ${d.ai||d.done?'disabled':''}>${I('sparkle','sm')} AI 초안</button></div>
+   ${d.writing?`<div class="writing"><span class="pill" style="background:#7c5cd6;color:#fff;height:30px;padding:0 14px">+ AI가 초안을 쓰고 있어요…</span></div>`:
+   `<textarea class="textarea" id="fbBody" placeholder="채점 결과와 질문 이력을 바탕으로 시험 전체에 대한 종합 피드백을 작성하세요." ${d.ai&&!d.done?'':'disabled'}>${esc(d.body)}</textarea>`}
+   <div class="meta">${d.done?'작성 완료 · 2026.11.28':d.ai?(added(d)?'<span class="add-tag">교사가 덧붙인 문장</span> 저장되지 않은 변경 있음':'<span class="ai-badge" style="font-size:11px;font-weight:700;color:#4f46e5;background:#eef2ff;border-radius:6px;padding:2px 7px">AI 초안</span> 초안을 검토하고 필요한 내용을 직접 덧붙이세요'):'작성 전'}</div>
+   <div class="btns"><button class="btn" data-blocked="임시 저장" ${d.done?'disabled':''}>${I('save','sm')} 임시 저장</button><button class="btn primary" id="btnDone" ${d.ai&&!d.done&&added(d)?'':'disabled'}>${I('send','sm')} 작성 완료</button></div></div>`
+  :`<div style="padding:80px 20px;text-align:center;color:#94a3b8">${I('user')}<div style="margin-top:8px">왼쪽에서 학생을 선택하면 채점 결과와 종합 피드백 작성란이 열립니다.</div></div>`;
+ return `<div class="page-head"><button class="back-btn" data-blocked="뒤로">${I('arrowL')}</button><h1 class="page-title">종합 피드백</h1>${d.done?`<button class="btn" id="toStudent" style="margin-left:auto">${I('swap','sm')} 학생 화면으로 보기</button>`:''}</div>
+ <section class="box infobar"><b>[교육청연합] 2026년 2학년 2학기 국어</b><span class="sub">· 국어</span><span class="right">2026.11.20 · 작성완료 <b>${d.done?5:4} / 14명</b></span></section>
+ <div class="fb-grid"><section class="box"><div class="box-hd"><span class="ic">${I('list')}</span><h3>학생</h3><div class="right" style="color:#64748b;font-size:13px">14명</div></div>
+  <div class="st-list"><div class="st-sel">전체 학생 ${I('chevD','sm')}</div>${list}</div></section>
+  <section class="box">${detail}</section></div>`;
+}
+function added(d){const b=(d.body||'').trim();return d.ai&&b!==DRAFT.trim()&&b.length>0}
+function addedPart(d){const b=d.body||'';return b.startsWith(DRAFT)?[DRAFT,b.slice(DRAFT.length)]:['',b]}
+
+function studentHTML(d){
+ const [base,add]=addedPart(d);
+ return `<div class="page-head"><h1 class="page-title">결과확인</h1><span class="pill blue" style="margin-left:6px">학생 화면</span><button class="btn" id="toTeacher" style="margin-left:auto">${I('swap','sm')} 교사 화면으로 돌아가기</button></div>
+ <section class="box"><div class="stu-card"><span class="box-hd" style="padding:0;border:0"><span class="ic">${I('file')}</span></span><div><div style="font-size:12.5px;color:#64748b">교육청연합</div><b style="font-size:17px">[교육청연합] 2026년 2학년 2학기 국어</b><div style="font-size:13px;color:#64748b">2026.11.20 · 서술형 3문항</div></div><span class="pill ok" style="margin-left:auto">피드백 공개</span></div>
+  <div class="stu-score"><div><small>총점</small><b>24 / 30점</b></div><div><small>1번 문항</small><b>9 / 10</b></div><div><small>2번 문항</small><b>7 / 10</b></div><div><small>3번 문항</small><b>8 / 10</b></div></div>
+  <div style="padding:0 22px 8px;font-weight:700">선생님의 종합 피드백</div>
+  <div class="fb-view">${esc(base)}${add?`<mark>${esc(add)}</mark>`:''}</div>
+  <div style="padding:0 22px 22px;display:flex;gap:8px;align-items:center;color:#64748b;font-size:13px">${I('msg','sm')} 궁금한 점은 문항별 ‘질문하기’로 선생님께 물어볼 수 있습니다. <button class="btn sm" data-blocked="질문하기" style="margin-left:auto">${I('send','xs')} 질문하기</button></div></section>`;
+}
+
+function render(s){
+ const d=s.data, main=document.getElementById('main');
+ if(d.view==='student'){main.innerHTML=studentHTML(d);Demo.setShell({sidebar:{student:true,open:'평가 결과',active:'내 평가 결과'},crumb:['평가 결과','결과확인'],user:{name:'최지우',role:'학생',student:true,bell:'3'}});
+  document.getElementById('toTeacher').onclick=()=>{D.view='teacher';Demo.save();render(S)};return}
+ Demo.setShell({sidebar:{open:'평가 결과',active:'평가 결과 목록'},crumb:['평가 결과','평가 결과 목록','종합 피드백'],user:{name:'박시현',role:'선임채점관',bell:'99+'}});
+ main.innerHTML=teacherHTML(d);
+ const j=document.getElementById('stuJiwoo'); j.onclick=()=>{if(D.picked)return;D.picked=true;Demo.save();render(S);Demo.step(1)};
+ const a=document.getElementById('btnAi'); if(a) a.onclick=async()=>{if(D.ai)return;D.writing=true;render(S);Demo.coach(null);await Demo.wait(1900);D.writing=false;D.ai=true;D.body=DRAFT+'\n';Demo.save();render(S);Demo.step(2);const t=document.getElementById('fbBody');t.focus();t.setSelectionRange(t.value.length,t.value.length);t.classList.add('fresh')};
+ const t=document.getElementById('fbBody'); if(t){let h;t.addEventListener('input',e=>{D.body=e.target.value;Demo.save();const ok=added(D);document.getElementById('btnDone').disabled=!ok;
+   const m=t.parentElement.querySelector('.meta');m.innerHTML=ok?'<span class="add-tag">교사가 덧붙인 문장</span> 저장되지 않은 변경 있음':m.innerHTML;clearTimeout(h);if(ok&&S.step===2)h=setTimeout(()=>Demo.step(3),1500)})}
+ const b=document.getElementById('btnDone'); if(b) b.onclick=()=>{if(!added(D)){Demo.toast('초안에 학생에게 필요한 내용을 직접 덧붙여 주세요');return}document.getElementById('confirm').style.display='grid';Demo.step(4)};
+ const ts=document.getElementById('toStudent'); if(ts) ts.onclick=()=>{D.view='student';Demo.save();render(S)};
+}
+document.getElementById('cfIc').innerHTML=I('reset');
+document.getElementById('cfNo').onclick=()=>{document.getElementById('confirm').style.display='none'};
+document.getElementById('cfYes').onclick=async()=>{document.getElementById('confirm').style.display='none';D.done=true;Demo.save();render(S);Demo.toast('종합 피드백을 확정했습니다 · 학생 화면으로 전환합니다');Demo.finish(false);
+ await Demo.wait(1600);D.view='student';Demo.save();render(S);document.getElementById('main').scrollTop=0;setTimeout(()=>{if(!D.coverShown){D.coverShown=true;Demo.save();Demo.showFinish()}},4500)};
+
+Demo.init({
+ key:'depth-booth4', letter:'TH', color:'#e07a3f', boothName:'깊이 잇다 · 피드백', screenName:'종합 피드백',
+ img:'dipi_th.png', next:'',
+ startTitle:'평가의 결과를 배움으로 이어 갑니다', startDesc:'학생별 채점 결과를 모아 보고, AI 초안을 바탕으로 교사가 다음 배움에 필요한 내용을 덧붙여 종합 피드백을 확정합니다.',
+ finishTitle:'종합 피드백이 학생에게 전달되었습니다', finishDesc:'AI 초안에 직접 덧붙인 문장이 학생 화면에 그대로 보입니다. 네 부스를 모두 돌았다면 디피 스티커 네 장이 모였습니다.',
+ sidebar:{open:'평가 결과',active:'평가 결과 목록'}, crumb:['평가 결과','평가 결과 목록','종합 피드백'], user:{name:'박시현',role:'선임채점관',bell:'99+'},
+ defaults:{picked:false,ai:false,body:'',done:false,view:'teacher'},
+ steps:[
+  {short:'‘미작성’ 학생을 선택합니다',text:'아직 피드백을 쓰지 않은 ‘최지우’ 학생을 선택하세요',tip:'눌러서 선택하세요',target:'#stuJiwoo'},
+  {short:'AI 초안을 만듭니다',text:'‘AI 초안’을 눌러 종합 피드백 초안을 만드세요',tip:'눌러 보세요',target:'#btnAi'},
+  {short:'학생에게 필요한 내용을 직접 덧붙입니다',text:'초안 끝에 학생이 다음에 해 볼 것을 한 문장 덧붙이세요',tip:'한 문장을 직접 덧붙여 보세요',target:'#fbBody',input:true},
+  {short:'작성 완료를 누릅니다',text:'‘작성 완료’를 눌러 확정하세요',tip:'눌러서 확정하세요',target:'#btnDone'},
+  {short:'확인하면 학생 화면에 공개됩니다',text:'확인 창에서 ‘작성 완료’를 누르면 학생 화면으로 바뀝니다',tip:'확정하세요',target:'#cfYes'}
+ ],
+ render:s=>{window.S=s;window.D=s.data;render(s)}
+});
+const S=Demo.state, D=S.data;
+})();
+</script>
+</body></html>
