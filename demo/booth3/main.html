@@ -61,6 +61,23 @@
 .spop .g button:hover{background:#f6f7f9}
 .spop .g button.on{background:#e8352b;color:#fff;border-color:#e8352b}
 .spop .cur{margin-top:9px;padding-top:8px;border-top:1px solid #eef0f3;font-size:11.5px;color:#6b7280;text-align:center}
+
+.dm-page.tool-stamp{user-select:none}
+.ink-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible}
+.ink-layer .hit{stroke:transparent;fill:none;pointer-events:none}
+.dm-page.tool-eraser .ink-layer .hit{pointer-events:stroke;cursor:pointer}
+.dm-page.tool-eraser .ink-layer g:hover .ink{opacity:.45}
+.hlw{display:flex;gap:2px;width:52px;margin-top:-1px}
+.hlw button{flex:1;height:17px;font-size:9px;font-weight:700;border:1px solid #e5e7eb;border-radius:4px;background:#fff;color:#6b7280;cursor:pointer;padding:0}
+.hlw button.on{background:#e8352b;border-color:#e8352b;color:#fff}
+.acm{position:absolute;z-index:6;display:flex;gap:6px;align-items:flex-start;transform:translate(-13px,-13px)}
+.acm .no{flex:none;width:26px;height:26px;border-radius:50%;background:#e8352b;color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.acm .bx{width:250px;background:#fff;border:1.5px solid #f3b4ae;border-radius:10px;padding:7px 10px;font-size:13px;line-height:1.55;color:#374151;box-shadow:0 6px 16px -8px rgba(0,0,0,.3);white-space:pre-wrap;word-break:break-all}
+.acm textarea{display:block;width:100%;border:0;outline:0;resize:none;font:inherit;line-height:1.55;min-height:42px;cursor:text!important}
+.acm .hint{font-size:10.5px;color:#9ca3af;margin-top:2px}
+.dm-page.tool-none .acm .bx{cursor:text}
+.dm-page.tool-eraser .acm{cursor:pointer;outline:1.5px dashed #9ca3af;outline-offset:3px;border-radius:8px}
+.dm-page.tool-stamp .acm:not(.ed){pointer-events:none}
 </style></head>
 <body>
 <div id="dmRoot"></div>
@@ -95,20 +112,26 @@ const STAMPS=[
  {type:'cross',label:'X',key:'4',color:'#EF4444',bg:'#FFF0F0',svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'}];
 const SMAP=Object.fromEntries(STAMPS.map(x=>[x.type,x]));
 const SCORES=[...new Set(EL.flatMap(e=>e.p))].sort((a,b)=>a-b);
-let tool=null, pop=false, actEl=0, hist=[], hidx=-1;   // 도구·이력은 저장하지 않음(실제와 같이 화면을 다시 열면 선택 도구로 시작)
-const isSt=t=>tool&&tool.type==='stamp'&&tool.st===t, isSc=()=>tool&&tool.type==='stamp'&&tool.val!=null;
+let S,D; let tool=null, pop=false, actEl=0, hist=[], hidx=-1;   // 도구·이력은 저장하지 않음(실제와 같이 화면을 다시 열면 선택 도구로 시작)
+let hlW=20, editId=null; const isLn=t=>tool&&tool.type==='line'&&tool.lt===t; const isSt=t=>tool&&tool.type==='stamp'&&tool.st===t, isSc=()=>tool&&tool.type==='stamp'&&tool.val!=null;
 function toolHTML(d){
  return `<div class="dm-tool"><span class="cap">스탬프</span>
   ${STAMPS.map(x=>`<button class="stp ${isSt(x.type)?'on':''}" data-st="${x.type}" title="${x.label} (${x.key})" aria-label="${x.label}" style="color:${x.color};background:${x.bg}">${x.svg}</button>`).join('')}
   <div class="tsep"></div><button class="tl ${isSc()||pop?'on':''}" id="tlScore" title="점수 (S)">${I('hash')}<span>점수</span></button>
   <span class="cap">표시</span>
-  <button class="tl off" data-na="강조">${I('hl')}<span>강조</span></button><button class="tl off" data-na="밑줄">${I('underline')}<span>밑줄</span></button><button class="tl off" data-na="자유선">${I('pen')}<span>자유선</span></button>
-  <div class="tsep"></div><button class="tl off" data-na="코멘트">${I('msg')}<span>코멘트</span></button>
+  <button class="tl ${isLn('highlight')?'on':''}" data-ln="highlight" title="강조 (Shift+H)"><span style="color:${isLn('highlight')?'#fff':'#FBBF24'};display:grid">${I('hl')}</span><span>강조</span></button>
+  ${isLn('highlight')?`<div class="hlw">${[['L',12,'얇게'],['M',20,'보통'],['B',32,'굵게']].map(x=>`<button data-w="${x[1]}" title="${x[2]}" class="${hlW===x[1]?'on':''}">${x[0]}</button>`).join('')}</div>`:''}
+  <button class="tl ${isLn('underline')?'on':''}" data-ln="underline" title="밑줄 (U)"><span style="color:${isLn('underline')?'#fff':'#9CA3AF'};display:grid">${I('underline')}</span><span>밑줄</span></button>
+  <button class="tl ${tool&&tool.type==='free'?'on':''}" id="tlFree" title="자유선 (P)"><span style="color:${tool&&tool.type==='free'?'#fff':'#8B5CF6'};display:grid">${I('pen')}</span><span>자유선</span></button>
+  <div class="tsep"></div><button class="tl ${tool&&tool.type==='comment'?'on':''}" id="tlCmt" title="코멘트 (C)">${I('msg')}<span>코멘트</span></button>
   <button class="tl ${tool&&tool.type==='eraser'?'on':''}" id="tlEraser" title="지우개 (E)">${I('eraser')}<span>지우개</span></button>
   <button class="tl ${tool?'':'on'}" id="tlSelect" title="선택·이동 (Esc)">${I('hand')}<span>이동</span></button></div>`;
 }
 function stmHTML(a){
  const st=`left:${(a.x*100).toFixed(3)}%;top:${a.y}px`;
+ if(a.k==='line'||a.k==='free') return '';
+ if(a.k==='cmt'){ const no=2+D.stamps.filter(q=>q.k==='cmt').indexOf(a); const right=a.x>.62;
+  return `<div class="acm ${editId===a.id?'ed':''}" data-id="${a.id}" style="left:${(a.x*100).toFixed(3)}%;top:${a.y}px;${right?'flex-direction:row-reverse;transform:translate(calc(-100% + 13px),-13px)':''}"><span class="no">${no}</span><div class="bx">${editId===a.id?`<textarea id="acmTa" rows="2" placeholder="코멘트를 입력하고 Enter">${esc(a.text)}</textarea><div class="hint">Enter 저장 · Shift+Enter 줄바꿈 · Esc 취소</div>`:esc(a.text)}</div></div>`; }
  if(a.el!=null) return `<div class="stm sc" data-id="${a.id}" style="${st}" title="문항 1 · ${EL[a.el].name}">${a.val}<small>Q1-${a.el+1}</small></div>`;
  const x=SMAP[a.type]; return `<div class="stm" data-id="${a.id}" style="${st};color:${x.color}" title="${x.label}">${x.svg}</div>`;
 }
@@ -143,16 +166,61 @@ function undo(){ if(hidx<0) return; const h=hist[hidx--]; touch();
  if(h.op==='ADD'){D.stamps=D.stamps.filter(q=>q.id!==h.a.id); if(h.snap) D.sel[h.snap.el]=h.snap.before}
  else if(h.op==='DEL'){D.stamps.push(h.a); if(h.snap) D.sel[h.snap.el]=h.snap.before}
  else if(h.op==='MOVE'){const q=D.stamps.find(q=>q.id===h.id); if(q){q.x=h.from[0];q.y=h.from[1]}}
+ else if(h.op==='EDIT'){const q=D.stamps.find(q=>q.id===h.id); if(q)q.text=h.from}
  S.data.stamps=D.stamps; Demo.save(); render(S); }
 function redo(){ if(hidx>=hist.length-1) return; const h=hist[++hidx]; touch();
  if(h.op==='ADD'){D.stamps.push(h.a); if(h.snap) D.sel[h.snap.el]=h.snap.after}
  else if(h.op==='DEL'){D.stamps=D.stamps.filter(q=>q.id!==h.a.id); if(h.snap) D.sel[h.snap.el]=h.snap.after}
  else if(h.op==='MOVE'){const q=D.stamps.find(q=>q.id===h.id); if(q){q.x=h.to[0];q.y=h.to[1]}}
+ else if(h.op==='EDIT'){const q=D.stamps.find(q=>q.id===h.id); if(q)q.text=h.to}
  S.data.stamps=D.stamps; Demo.save(); render(S); }
 function setTool(t){ tool=t; if(!(t&&t.val!=null)) pop=pop&&false; render(S) }
+const NS='http://www.w3.org/2000/svg';
+function inkEl(a,W){
+ const g=document.createElementNS(NS,'g'); g.dataset.id=a.id; let d;
+ if(a.k==='line') d=`M${a.x1*W} ${a.y1} L${a.x2*W} ${a.y2}`; else d='M'+a.pts.map(q=>`${(q[0]*W).toFixed(1)} ${q[1]}`).join(' L');
+ const mk=(cls,w,col,op)=>{const e=document.createElementNS(NS,'path'); e.setAttribute('d',d); e.setAttribute('class',cls); e.setAttribute('fill','none'); e.setAttribute('stroke-linecap',a.k==='line'&&a.lt==='highlight'?'butt':'round'); e.setAttribute('stroke-linejoin','round'); e.setAttribute('stroke-width',w); if(col){e.setAttribute('stroke',col); e.setAttribute('opacity',op)} return e};
+ const hl=a.k==='line'&&a.lt==='highlight';
+ g.appendChild(mk('ink',a.w,hl?'#FBBF24':a.k==='free'?'#8B5CF6':'#EF4444',hl?.42:1)); g.appendChild(mk('hit',Math.max(16,a.w+8)));
+ return g;
+}
+function drawInk(){ const pg=document.getElementById('dmPage'), sv=document.getElementById('ink'); if(!sv) return; const W=pg.clientWidth; sv.innerHTML='';
+ D.stamps.filter(a=>a.k==='line'||a.k==='free').forEach(a=>{const g=inkEl(a,W); g.querySelector('.hit').addEventListener('click',e=>{if(tool&&tool.type==='eraser'){e.stopPropagation();delStamp(a.id)}}); sv.appendChild(g)}); }
+function newId(){return 's'+Date.now().toString(36)+Math.floor(Math.random()*1e3)}
+function commitAnn(a){ touch(); D.stamps.push(a); push({op:'ADD',a,snap:null}); Demo.save(); render(S) }
+function saveCmt(id,val){ const a=D.stamps.find(q=>q.id===id); editId=null; if(!a){render(S);return} const t=(val||'').trim();
+ if(!t){ if(a._new){D.stamps=D.stamps.filter(q=>q.id!==id);S.data.stamps=D.stamps} Demo.save(); render(S); return }
+ touch(); if(a._new){delete a._new; a.text=t; push({op:'ADD',a,snap:null})} else if(a.text!==t){push({op:'EDIT',id,from:a.text,to:t}); a.text=t}
+ Demo.save(); render(S) }
+window.addEventListener('resize',()=>{ if(document.getElementById('ink')) drawInk() });
 function bindTools(){
+ drawInk();
+ document.querySelectorAll('.tl[data-ln]').forEach(b=>b.onclick=()=>{pop=false;setTool(isLn(b.dataset.ln)?null:{type:'line',lt:b.dataset.ln})});
+ document.querySelectorAll('.hlw button').forEach(b=>b.onclick=()=>{hlW=+b.dataset.w;render(S)});
+ document.getElementById('tlFree').onclick=()=>{pop=false;setTool(tool&&tool.type==='free'?null:{type:'free'})};
+ document.getElementById('tlCmt').onclick=()=>{pop=false;setTool(tool&&tool.type==='comment'?null:{type:'comment'})};
+ { const pg=document.getElementById('dmPage'), sv=document.getElementById('ink');
+  const pos=e=>{const r=pg.getBoundingClientRect(); return [Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),Math.max(0,Math.round(e.clientY-r.top))]};
+  pg.addEventListener('pointerdown',e=>{
+   if(!tool||(tool.type!=='line'&&tool.type!=='free')||e.button!==0) return; if(e.target.closest('.cmt-card,.acm,textarea,button')) return;
+   e.preventDefault(); const W=pg.clientWidth, p0=pos(e);
+   const a=tool.type==='line'?{id:newId(),k:'line',lt:tool.lt,x1:p0[0],y1:p0[1],x2:p0[0],y2:p0[1],w:tool.lt==='highlight'?hlW:3}:{id:newId(),k:'free',pts:[p0],w:3};
+   let g=inkEl(a,W); sv.appendChild(g); pg.setPointerCapture(e.pointerId);
+   const mv=ev=>{const q=pos(ev); if(a.k==='line'){a.x2=q[0];a.y2=q[1]} else {const l=a.pts[a.pts.length-1]; if(Math.abs((q[0]-l[0])*W)+Math.abs(q[1]-l[1])>=2) a.pts.push(q)} const n=inkEl(a,W); sv.replaceChild(n,g); g=n};
+   const up=()=>{pg.removeEventListener('pointermove',mv);pg.removeEventListener('pointerup',up);pg.removeEventListener('pointercancel',up);
+    const len=a.k==='line'?Math.hypot((a.x2-a.x1)*W,a.y2-a.y1):a.pts.length*2; if(len<5){g.remove();return} commitAnn(a)};
+   pg.addEventListener('pointermove',mv); pg.addEventListener('pointerup',up); pg.addEventListener('pointercancel',up); });
+  pg.addEventListener('click',e=>{ if(!tool||tool.type!=='comment') return; if(e.target.closest('.cmt-card,.acm,textarea,button')) return;
+   const q=pos(e); const a={id:newId(),k:'cmt',x:q[0],y:q[1],text:'',_new:true}; D.stamps.push(a); editId=a.id; tool=null; render(S) });
+  pg.querySelectorAll('.acm').forEach(el=>el.addEventListener('click',e=>{ const id=el.dataset.id;
+   if(tool&&tool.type==='eraser'){e.stopPropagation(); delStamp(id); return}
+   if(!tool&&editId!==id){editId=id; render(S)} }));
+  const ta=document.getElementById('acmTa');
+  if(ta){ ta.focus({preventScroll:true}); ta.setSelectionRange(ta.value.length,ta.value.length); const id=editId; let fin=false;
+   ta.addEventListener('keydown',e=>{ if(e.isComposing) return; if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();fin=true;saveCmt(id,ta.value)} else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();fin=true;const a=D.stamps.find(q=>q.id===id);saveCmt(id,a&&a._new?'':(a?a.text:''))} });
+   ta.addEventListener('blur',()=>{ if(!fin&&editId===id){fin=true;saveCmt(id,ta.value)} }); }
+ }
  document.querySelectorAll('.stp').forEach(b=>b.onclick=()=>{pop=false;setTool(isSt(b.dataset.st)?null:{type:'stamp',st:b.dataset.st})});
- document.querySelectorAll('.tl[data-na]').forEach(b=>b.onclick=()=>Demo.toast('이 체험판에서는 스탬프·점수·지우개 도구를 사용할 수 있습니다'));
  document.getElementById('tlScore').onclick=()=>{pop=!pop; if(pop){const nx=D.sel.findIndex(v=>v==null); if(nx>=0&&!isSc())actEl=nx} render(S)};
  document.getElementById('tlEraser').onclick=()=>{pop=false;setTool(tool&&tool.type==='eraser'?null:{type:'eraser'})};
  document.getElementById('tlSelect').onclick=()=>{pop=false;setTool(null)};
@@ -182,6 +250,11 @@ document.addEventListener('keydown',e=>{
  if(e.altKey||e.repeat) return;
  const m=e.code.match(/^(?:Digit|Numpad)([1-4])$/);
  if(m&&!e.shiftKey){e.preventDefault();pop=false;setTool({type:'stamp',st:STAMPS[+m[1]-1].type});return}
+ if(e.code==='KeyH'&&e.shiftKey){e.preventDefault();pop=false;setTool({type:'line',lt:'highlight'});return}
+ if(e.code==='KeyH'){e.preventDefault();pop=false;setTool(null);return}
+ if(e.code==='KeyU'&&!e.shiftKey){e.preventDefault();pop=false;setTool({type:'line',lt:'underline'});return}
+ if(e.code==='KeyP'&&!e.shiftKey){e.preventDefault();pop=false;setTool({type:'free'});return}
+ if(e.code==='KeyC'&&!e.shiftKey){e.preventDefault();pop=false;setTool({type:'comment'});return}
  if(e.code==='KeyS'&&!e.shiftKey){e.preventDefault();document.getElementById('tlScore').click();return}
  if(e.code==='KeyE'&&!e.shiftKey){e.preventDefault();pop=false;setTool({type:'eraser'});return}
  if(e.code==='Escape'){ if(pop||tool){pop=false;setTool(null)} }
@@ -204,7 +277,7 @@ function dmHTML(d){
   ${d.sel.every(v=>v!=null)?`<div class="cmt-box" id="cmtWrap"><div class="cmt-card"><div class="h">${I('msg','sm')} 코멘트 1 · 판단 근거 ${d.cmtSaved?'<span class="pill gray" style="margin-left:auto">저장됨</span>':''}</div>
    ${d.cmtSaved||done?`<div class="saved">${esc(d.cmt)}</div>`:`<textarea id="cmt" rows="2" placeholder="밑줄 친 문장에 대한 판단 근거를 적어 주세요. 예: 태도는 분명하지만 근거와의 연결 설명이 부족함">${esc(d.cmt)}</textarea>`}</div></div>
    <div class="lead">${I('arrowR','sm')} 문항 1 · ${EL[1].name}</div>`:''}
-  ${(d.stamps||[]).map(stmHTML).join('')}
+  <svg class="ink-layer" id="ink"></svg>${(d.stamps||[]).map(stmHTML).join('')}
  </div></div>
  <div class="dm-side"><div class="hd">채점</div><div class="bd"><div class="dm-q"><div class="qh">문항 1 <b>${total(sel)} / 10</b></div>
   ${EL.map((e,ei)=>`<div class="dm-el ${sel[ei]==null?'cur':''}" id="el${ei}"><div class="eh"><span>${e.name} <small>(${e.pt}점)</small></span><b>${sel[ei]==null?0:e.p[sel[ei]]}점</b></div>
@@ -214,7 +287,7 @@ function dmHTML(d){
    <button class="tmp" data-blocked="임시저장" ${done?'disabled':''}>${I('save','sm')} 임시저장</button>
    ${done?`<button class="tmp" id="btnAiView">${I('eye','sm')} AI 채점 확인</button><button class="done" disabled style="background:#16a34a">${I('check','sm')} 제출 완료</button><div class="lock-note">수준을 다시 고르면 수정할 수 있습니다 · 본채점 전체 완료 전까지</div>`:`<button class="done" id="btnDone" ${(sel.every(v=>v!=null)&&d.cmt.trim().length>=2)?'':'disabled'}>${I('send','sm')} 채점 완료</button>`}
   </div></div>
- <div class="dm-status"><span>${I('save','xs')} Auto-saved: ${done?'방금':'--:--:--'}</span><span>${I('hl','xs')} Annotations: ${(d.cmtSaved?2:1)+(d.stamps||[]).length}</span><span>${I('file','xs')} Role: 채점교사 · 1차 본채점</span></div></div>`;
+ <div class="dm-status"><span>${I('save','xs')} Auto-saved: ${done?'방금':'--:--:--'}</span><span>${I('hl','xs')} Annotations: ${(d.cmtSaved?2:1)+(d.stamps||[]).filter(a=>!a._new).length}</span><span>${I('file','xs')} Role: 채점교사 · 1차 본채점</span></div></div>`;
 }
 
 function aiHTML(d){
@@ -232,7 +305,7 @@ function aiHTML(d){
 }
 
 function render(s){
- const d=s.data; if(!d.stamps)d.stamps=[]; const _dc=document.querySelector('.dm-doc'),_sb=document.querySelector('.dm-side .bd'),_st=_dc?_dc.scrollTop:0,_ss=_sb?_sb.scrollTop:0; document.getElementById('dmRoot').innerHTML=dmHTML(d); document.querySelector('.dm-doc').scrollTop=_st; document.querySelector('.dm-side .bd').scrollTop=_ss; bindTools();
+ const d=s.data; if(!d.stamps)d.stamps=[]; if(editId==null&&d.stamps.some(a=>a._new)){d.stamps=d.stamps.filter(a=>!a._new)} const _dc=document.querySelector('.dm-doc'),_sb=document.querySelector('.dm-side .bd'),_st=_dc?_dc.scrollTop:0,_ss=_sb?_sb.scrollTop:0; document.getElementById('dmRoot').innerHTML=dmHTML(d); document.querySelector('.dm-doc').scrollTop=_st; document.querySelector('.dm-side .bd').scrollTop=_ss; bindTools();
  document.querySelectorAll('.dm-lv').forEach(b=>b.onclick=()=>{if(D.done){D.done=false;D.reedit=true;Demo.toast('채점을 수정합니다 · 다시 ‘채점 완료’를 눌러 주세요')}const ei=+b.dataset.el,li=+b.dataset.lv;D.sel[ei]=li;const q=D.stamps.find(q=>q.el===ei);if(q)q.val=EL[ei].p[li];actEl=ei;Demo.save();render(S);
   const n=D.sel.filter(v=>v!=null).length;if(!D.reedit)Demo.step(Math.min(4,1+n));const nx=D.sel.findIndex(v=>v==null);if(nx>=0)Demo.coach('#el'+nx);else if(!D.cmtSaved)Demo.coach('#cmt');else Demo.coach('#btnDone');});
  const c=document.getElementById('cmt');
@@ -244,9 +317,9 @@ function openAI(){const m=document.getElementById('aiModal');m.innerHTML=aiHTML(
 
 Demo.init(Object.assign({},BOOTH_CFG,{home:'index.html',noShell:true,
  defaults:{sel:[null,null,null],cmt:'',cmtSaved:false,done:false,stamps:[]},
- render:s=>{window.S=s;window.D=s.data;render(s)}
+ render:s=>{S=s;D=s.data;window.S=s;window.D=s.data;render(s)}
 }));
-const S=Demo.state, D=S.data;
+S=Demo.state; D=S.data;
 document.getElementById('cfmNo').onclick=()=>{document.getElementById('cfm').style.display='none'};
 document.getElementById('cfmYes').onclick=()=>{document.getElementById('cfm').style.display='none';D.cmtSaved=true;D.done=true;Demo.save();Demo.toast('이 답안을 제출 완료로 표시했습니다');render(S);Demo.step(7)};
 if(!D.done){const nx=D.sel.findIndex(v=>v==null);if(nx>=0&&S.started)Demo.coach('#el'+nx,false)}
