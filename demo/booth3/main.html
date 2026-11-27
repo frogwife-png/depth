@@ -28,6 +28,39 @@
 .seed .grid div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#64748b}
 .seed .grid b{display:block;font-size:20px;color:#111827;margin-top:2px}
 .lock-note{display:flex;gap:6px;align-items:center;justify-content:center;color:#6b7280;font-size:12.5px;margin-top:8px}
+
+.dm-tool{padding:14px 6px 10px;gap:4px;overflow-y:auto;position:relative;z-index:20}
+.dm-tool .cap{font-size:11px;color:#9ca3af;margin:2px 0 2px;letter-spacing:.04em}
+.dm-tool .cap+.cap{margin-top:8px}
+.stp{width:26px;height:26px;display:grid;place-items:center;border-radius:5px;border:1px solid #e5e7eb;cursor:pointer;padding:0;transition:background .12s}
+.stp svg{width:20px;height:20px;display:block}
+.stp:hover{filter:brightness(.96)}
+.stp.on{background:#e8352b!important;color:#fff!important;border-color:#e8352b}
+.tl{width:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3px 0 2px;border-radius:5px;border:1px solid #e5e7eb;background:#fff;color:#111827;font-size:11px;cursor:pointer;gap:1px}
+.tl:hover{background:#f6f7f9}
+.tl.on{background:#e8352b;color:#fff;border-color:#e8352b}
+.tl.off{opacity:.45}
+.tl .i{width:18px;height:18px}
+.tsep{height:6px}
+.ubtn{width:30px;height:30px;display:grid;place-items:center;border-radius:6px;background:none;color:#374151;cursor:pointer}
+.ubtn:hover{background:#f3f4f6}.ubtn:disabled{opacity:.3;cursor:default;background:none}
+.dm-page{position:relative}
+.dm-page.tool-stamp,.dm-page.tool-stamp *{cursor:crosshair}
+.dm-page.tool-eraser .stm{cursor:pointer;outline:1.5px dashed #9ca3af;outline-offset:3px;border-radius:6px}
+.stm{position:absolute;transform:translate(-50%,-50%);z-index:5;display:grid;place-items:center;user-select:none;touch-action:none}
+.stm svg{width:34px;height:34px;display:block;filter:drop-shadow(0 1px 0 rgba(255,255,255,.9))}
+.stm.sc{min-width:34px;height:34px;padding:0 9px;border:2.5px solid #e8352b;border-radius:18px;background:rgba(255,255,255,.92);color:#e8352b;font-weight:800;font-size:17px;grid-auto-flow:column;gap:5px}
+.stm.sc small{font-size:10.5px;font-weight:700;color:#b91c1c}
+.dm-page.tool-none .stm{cursor:grab}
+.dm-page.tool-stamp .stm{pointer-events:none}
+.spop{position:fixed;z-index:60;width:212px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 28px -10px rgba(0,0,0,.3);padding:12px}
+.spop .l{font-size:10.5px;font-weight:600;color:#9ca3af;margin-bottom:4px}
+.spop select{width:100%;height:32px;border:1px solid #e5e7eb;border-radius:6px;padding:0 8px;font-size:12.5px;font-weight:600;margin-bottom:10px;background:#fff}
+.spop .g{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.spop .g button{height:36px;border-radius:5px;border:1px solid #e5e7eb;background:#fff;font-weight:700;font-size:14px;cursor:pointer}
+.spop .g button:hover{background:#f6f7f9}
+.spop .g button.on{background:#e8352b;color:#fff;border-color:#e8352b}
+.spop .cur{margin-top:9px;padding-top:8px;border-top:1px solid #eef0f3;font-size:11.5px;color:#6b7280;text-align:center}
 </style></head>
 <body>
 <div id="dmRoot"></div>
@@ -53,6 +86,108 @@ const AI={lv:[0,1,1],why:[
  '결론은 타당하나 마지막 문장이 판단 근거와 직접 연결되지 않습니다.']};
 const ANS=['화자는 잃어버린 우산을 생각해 조금 슬프지만 ','종이배처럼 버티려는 태도이다.',' 흙 냄새와 종이배 장면이 그 근거라고 생각한다. 판단한 순서는 지문의 장면 순서대로 남겨 두었습니다.'];
 
+
+/* ── 스탬프 도구 (실제 플랫폼: 체크 1 · 더블체크 2 · 물음표 3 · X 4 · 점수 S · 지우개 E) ── */
+const STAMPS=[
+ {type:'tick',label:'체크',key:'1',color:'#22C55E',bg:'#EAF9F0',svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'},
+ {type:'tick_2',label:'더블체크',key:'2',color:'#3B82F6',bg:'#EAF4FF',svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5.5 8.5 12 5 8.5"/><polyline points="20 9 10.5 18.5 7 15"/></svg>'},
+ {type:'question_mark',label:'물음표',key:'3',color:'#F59E0B',bg:'#FFF7E8',svg:'<svg viewBox="0 0 24 24" fill="currentColor"><text x="12" y="18" text-anchor="middle" font-size="18" font-weight="bold">?</text></svg>'},
+ {type:'cross',label:'X',key:'4',color:'#EF4444',bg:'#FFF0F0',svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'}];
+const SMAP=Object.fromEntries(STAMPS.map(x=>[x.type,x]));
+const SCORES=[...new Set(EL.flatMap(e=>e.p))].sort((a,b)=>a-b);
+let tool=null, pop=false, actEl=0, hist=[], hidx=-1;   // 도구·이력은 저장하지 않음(실제와 같이 화면을 다시 열면 선택 도구로 시작)
+const isSt=t=>tool&&tool.type==='stamp'&&tool.st===t, isSc=()=>tool&&tool.type==='stamp'&&tool.val!=null;
+function toolHTML(d){
+ return `<div class="dm-tool"><span class="cap">스탬프</span>
+  ${STAMPS.map(x=>`<button class="stp ${isSt(x.type)?'on':''}" data-st="${x.type}" title="${x.label} (${x.key})" aria-label="${x.label}" style="color:${x.color};background:${x.bg}">${x.svg}</button>`).join('')}
+  <div class="tsep"></div><button class="tl ${isSc()||pop?'on':''}" id="tlScore" title="점수 (S)">${I('hash')}<span>점수</span></button>
+  <span class="cap">표시</span>
+  <button class="tl off" data-na="강조">${I('hl')}<span>강조</span></button><button class="tl off" data-na="밑줄">${I('underline')}<span>밑줄</span></button><button class="tl off" data-na="자유선">${I('pen')}<span>자유선</span></button>
+  <div class="tsep"></div><button class="tl off" data-na="코멘트">${I('msg')}<span>코멘트</span></button>
+  <button class="tl ${tool&&tool.type==='eraser'?'on':''}" id="tlEraser" title="지우개 (E)">${I('eraser')}<span>지우개</span></button>
+  <button class="tl ${tool?'':'on'}" id="tlSelect" title="선택·이동 (Esc)">${I('hand')}<span>이동</span></button></div>`;
+}
+function stmHTML(a){
+ const st=`left:${(a.x*100).toFixed(3)}%;top:${a.y}px`;
+ if(a.el!=null) return `<div class="stm sc" data-id="${a.id}" style="${st}" title="문항 1 · ${EL[a.el].name}">${a.val}<small>Q1-${a.el+1}</small></div>`;
+ const x=SMAP[a.type]; return `<div class="stm" data-id="${a.id}" style="${st};color:${x.color}" title="${x.label}">${x.svg}</div>`;
+}
+function popHTML(){
+ const e=EL[actEl], cur=D.sel[actEl]==null?0:e.p[D.sel[actEl]];
+ return `<div class="spop" id="spop"><div class="l">활성 평가요소</div><select id="spEl">${EL.map((x,i)=>`<option value="${i}" ${i===actEl?'selected':''}>Q1-${i+1} ${x.name} (${x.pt}점)</option>`).join('')}</select>
+  <div class="l">점수 선택</div><div class="g">${SCORES.map(v=>`<button data-v="${v}" class="${isSc()&&tool.val===v&&tool.el===actEl?'on':''}">${v}</button>`).join('')}</div>
+  <div class="cur">현재 Q1-${actEl+1} ${e.name}: ${cur} / ${e.pt}</div></div>`;
+}
+function touch(){ if(D.done){D.done=false;D.reedit=true;Demo.toast('채점을 수정합니다 · 다시 ‘채점 완료’를 눌러 주세요')} }
+function progress(){ const n=D.sel.filter(v=>v!=null).length; if(!D.reedit)Demo.step(Math.min(4,1+n)); const nx=D.sel.findIndex(v=>v==null); if(nx>=0)Demo.coach('#el'+nx); else if(!D.cmtSaved)Demo.coach('#cmt'); else Demo.coach('#btnDone'); }
+function push(h){ hist=hist.slice(0,hidx+1); hist.push(h); hidx=hist.length-1 }
+function nextEl(){ const nx=D.sel.findIndex(v=>v==null); if(nx>=0){actEl=nx; if(isSc()){ if(EL[nx].p.includes(tool.val)) tool.el=nx; else tool=null }} else if(isSc()) tool=null }
+function addStamp(x,y){
+ const a={id:'s'+Date.now().toString(36)+Math.floor(Math.random()*1e3),x,y};
+ let snap=null;
+ if(isSc()){
+  const ei=tool.el, e=EL[ei];
+  if(D.stamps.some(q=>q.el===ei)){Demo.toast('평가요소당 점수 도장은 한 번만 찍을 수 있습니다.');return}
+  if(tool.val>e.pt){Demo.toast('평가요소의 최대 점수를 초과할 수 없습니다.');return}
+  const li=e.p.indexOf(tool.val); if(li<0){Demo.toast('채점 기준에 있는 점수만 선택할 수 있습니다.');return}
+  snap={el:ei,before:D.sel[ei],after:li}; a.el=ei; a.val=tool.val; touch(); D.sel[ei]=li;
+ } else { a.type=tool.st; touch(); }
+ D.stamps.push(a); push({op:'ADD',a,snap}); if(snap) nextEl(); Demo.save(); render(S); if(snap) progress();
+}
+function delStamp(id){
+ const k=D.stamps.findIndex(q=>q.id===id); if(k<0) return; const a=D.stamps[k]; let snap=null;
+ touch(); if(a.el!=null){ const li=EL[a.el].p.indexOf(a.val); snap={el:a.el,before:D.sel[a.el],after:null}; if(D.sel[a.el]===li) D.sel[a.el]=null; }
+ D.stamps.splice(k,1); push({op:'DEL',a,snap}); Demo.save(); render(S);
+}
+function undo(){ if(hidx<0) return; const h=hist[hidx--]; touch();
+ if(h.op==='ADD'){D.stamps=D.stamps.filter(q=>q.id!==h.a.id); if(h.snap) D.sel[h.snap.el]=h.snap.before}
+ else if(h.op==='DEL'){D.stamps.push(h.a); if(h.snap) D.sel[h.snap.el]=h.snap.before}
+ else if(h.op==='MOVE'){const q=D.stamps.find(q=>q.id===h.id); if(q){q.x=h.from[0];q.y=h.from[1]}}
+ S.data.stamps=D.stamps; Demo.save(); render(S); }
+function redo(){ if(hidx>=hist.length-1) return; const h=hist[++hidx]; touch();
+ if(h.op==='ADD'){D.stamps.push(h.a); if(h.snap) D.sel[h.snap.el]=h.snap.after}
+ else if(h.op==='DEL'){D.stamps=D.stamps.filter(q=>q.id!==h.a.id); if(h.snap) D.sel[h.snap.el]=h.snap.after}
+ else if(h.op==='MOVE'){const q=D.stamps.find(q=>q.id===h.id); if(q){q.x=h.to[0];q.y=h.to[1]}}
+ S.data.stamps=D.stamps; Demo.save(); render(S); }
+function setTool(t){ tool=t; if(!(t&&t.val!=null)) pop=pop&&false; render(S) }
+function bindTools(){
+ document.querySelectorAll('.stp').forEach(b=>b.onclick=()=>{pop=false;setTool(isSt(b.dataset.st)?null:{type:'stamp',st:b.dataset.st})});
+ document.querySelectorAll('.tl[data-na]').forEach(b=>b.onclick=()=>Demo.toast('이 체험판에서는 스탬프·점수·지우개 도구를 사용할 수 있습니다'));
+ document.getElementById('tlScore').onclick=()=>{pop=!pop; if(pop){const nx=D.sel.findIndex(v=>v==null); if(nx>=0&&!isSc())actEl=nx} render(S)};
+ document.getElementById('tlEraser').onclick=()=>{pop=false;setTool(tool&&tool.type==='eraser'?null:{type:'eraser'})};
+ document.getElementById('tlSelect').onclick=()=>{pop=false;setTool(null)};
+ document.getElementById('btnUndo').onclick=undo; document.getElementById('btnRedo').onclick=redo;
+ const old=document.getElementById('spop'); if(old) old.remove();
+ if(pop){ document.body.insertAdjacentHTML('beforeend',popHTML()); const p=document.getElementById('spop'), r=document.getElementById('tlScore').getBoundingClientRect();
+  p.style.left=(r.right+8)+'px'; p.style.top=Math.max(8,Math.min(r.top,innerHeight-p.offsetHeight-110))+'px';
+  p.querySelector('#spEl').onchange=e=>{actEl=+e.target.value; if(isSc()){ if(EL[actEl].p.includes(tool.val)) tool.el=actEl; else tool=null } render(S)};
+  p.querySelectorAll('.g button').forEach(b=>b.onclick=()=>{tool={type:'stamp',st:'score_'+b.dataset.v,val:+b.dataset.v,el:actEl}; pop=false; render(S); Demo.toast(`답안 위를 눌러 ${b.dataset.v}점 도장을 찍어 주세요`)}); }
+ const pg=document.getElementById('dmPage');
+ pg.addEventListener('click',e=>{
+  if(!tool||tool.type!=='stamp') return; if(e.target.closest('.cmt-card,textarea,button')) return;
+  const r=pg.getBoundingClientRect(); addStamp(Math.min(.99,Math.max(.01,(e.clientX-r.left)/r.width)),Math.round(e.clientY-r.top)); });
+ pg.querySelectorAll('.stm').forEach(el=>{
+  el.addEventListener('click',e=>{ if(tool&&tool.type==='eraser'){e.stopPropagation();delStamp(el.dataset.id)} });
+  el.addEventListener('pointerdown',e=>{ if(tool) return; e.preventDefault(); const a=D.stamps.find(q=>q.id===el.dataset.id); if(!a) return; const from=[a.x,a.y]; const r=pg.getBoundingClientRect(); el.setPointerCapture(e.pointerId); el.style.cursor='grabbing';
+   const mv=ev=>{a.x=Math.min(.99,Math.max(.01,(ev.clientX-r.left)/r.width)); a.y=Math.max(8,Math.round(ev.clientY-r.top)); el.style.left=(a.x*100)+'%'; el.style.top=a.y+'px'};
+   const up=()=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up); if(from[0]!==a.x||from[1]!==a.y){touch();push({op:'MOVE',id:a.id,from,to:[a.x,a.y]});Demo.save();render(S)}};
+   el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up); });
+ });
+}
+document.addEventListener('keydown',e=>{
+ if(!document.getElementById('dmPage')||e.isComposing) return;
+ if(e.target instanceof Element&&e.target.closest('input,textarea,select,[contenteditable]')) return;
+ if(document.getElementById('cfm').style.display!=='none'||document.getElementById('aiModal').style.display!=='none') return;
+ if(e.ctrlKey||e.metaKey){ if(e.code==='KeyZ'&&!e.altKey){e.preventDefault(); e.shiftKey?redo():undo()} return }
+ if(e.altKey||e.repeat) return;
+ const m=e.code.match(/^(?:Digit|Numpad)([1-4])$/);
+ if(m&&!e.shiftKey){e.preventDefault();pop=false;setTool({type:'stamp',st:STAMPS[+m[1]-1].type});return}
+ if(e.code==='KeyS'&&!e.shiftKey){e.preventDefault();document.getElementById('tlScore').click();return}
+ if(e.code==='KeyE'&&!e.shiftKey){e.preventDefault();pop=false;setTool({type:'eraser'});return}
+ if(e.code==='Escape'){ if(pop||tool){pop=false;setTool(null)} }
+});
+document.addEventListener('pointerdown',e=>{ if(pop&&!e.target.closest('#spop,#tlScore')){pop=false;render(S)} },true);
+
 function total(sel){return sel.reduce((a,v,i)=>a+(v==null?0:EL[i].p[v]),0)}
 function dmHTML(d){
  const sel=d.sel, done=d.done;
@@ -60,15 +195,16 @@ function dmHTML(d){
  <div class="dm-top"><img src="assets/logo.svg" alt="DEPTH"><span class="pill" style="background:#1f2937;color:#fff">1차 본채점</span>
   <div class="nav">${I('chevL','sm')}<b>1번</b><span class="mute">2 / 6</span>${I('chevR','sm')}<span class="st" style="margin-left:10px">${I('list','sm')} 현황 <span class="g">✓1</span> <span class="o">◌2</span></span><span class="st" style="margin-left:10px">${I('clip','sm')} 이력보기</span></div>
   <div class="meta"><span>시행: <b>[교육청연합] 2026년 2학년 2학기 국어</b></span><span>문항: <b>1번</b></span><span>수험번호: <b>2026-633851-0003</b></span><span>채점자: <b>박시현</b></span></div></div>
- <div class="dm-tool"><span class="cap">스탬프</span><span class="t" style="color:#16a34a">${I('check')}</span><span class="t" style="color:#2563eb">${I('check')}</span><span class="t" style="color:#f59e0b">${I('qmark')}</span><span class="t" style="color:#e8352b">${I('x')}</span><span class="t">${I('hash')}점수</span><span class="cap">표시</span><span class="t">${I('hl')}강조</span><span class="t">${I('underline')}밑줄</span><span class="t">${I('pen')}자유선</span><span class="t ${d.sel.every(v=>v!=null)&&!d.cmtSaved?'on':''}">${I('msg')}코멘트</span><span class="t">${I('eraser')}지우개</span><span class="t">${I('hand')}이동</span></div>
- <div class="dm-bar">${I('undo','sm')}${I('redo','sm')}<span class="btn sm" style="height:30px">${I('book','xs')} 문항·지문</span><div class="zoom">${I('zout','sm')}<span>120%</span>${I('zin','sm')}${I('fit','sm')}${I('expand','sm')}</div></div>
- <div class="dm-doc"><div class="dm-page"><div class="path">[교육청연합] 2026년 2학년 2학기 국어 / 1번 · 텍스트 답안</div><div class="exam">수험번호 : 2026-633851-0003</div><h2>문항 1</h2>
+ ${toolHTML(d)}
+ <div class="dm-bar"><button class="ubtn" id="btnUndo" title="실행 취소 (Ctrl+Z)" ${hidx<0?'disabled':''}>${I('undo','sm')}</button><button class="ubtn" id="btnRedo" title="다시 실행 (Ctrl+Shift+Z)" ${hidx>=hist.length-1?'disabled':''}>${I('redo','sm')}</button><span class="btn sm" style="height:30px">${I('book','xs')} 문항·지문</span><div class="zoom">${I('zout','sm')}<span>120%</span>${I('zin','sm')}${I('fit','sm')}${I('expand','sm')}</div></div>
+ <div class="dm-doc"><div class="dm-page tool-${tool?(tool.type==='eraser'?'eraser':'stamp'):'none'}" id="dmPage"><div class="path">[교육청연합] 2026년 2학년 2학기 국어 / 1번 · 텍스트 답안</div><div class="exam">수험번호 : 2026-633851-0003</div><h2>문항 1</h2>
   <h4>지문</h4><div class="dm-box">비가 그친 뒤 운동장에는 작은 물웅덩이가 남았다. 아이들이 띄운 종이배는 바람에 흔들렸지만 끝내 뒤집히지 않았다. 화자는 젖은 흙 냄새를 맡으며 오래전 잃어버린 우산을 떠올렸다.</div>
   <h4>문제</h4><div class="dm-box">화자의 태도를 한 가지로 정리하고, 그렇게 판단한 근거를 두 가지 들어 설명하세요.</div>
   <h4>학생 답안</h4><div class="dm-ans">${ANS[0]}<span class="${d.sel.every(v=>v!=null)?'u-red':''}">${ANS[1]}</span>${d.sel.every(v=>v!=null)?'<span class="dm-mark">1</span>':''}${ANS[2]}</div>
   ${d.sel.every(v=>v!=null)?`<div class="cmt-box" id="cmtWrap"><div class="cmt-card"><div class="h">${I('msg','sm')} 코멘트 1 · 판단 근거 ${d.cmtSaved?'<span class="pill gray" style="margin-left:auto">저장됨</span>':''}</div>
    ${d.cmtSaved||done?`<div class="saved">${esc(d.cmt)}</div>`:`<textarea id="cmt" rows="2" placeholder="밑줄 친 문장에 대한 판단 근거를 적어 주세요. 예: 태도는 분명하지만 근거와의 연결 설명이 부족함">${esc(d.cmt)}</textarea>`}</div></div>
    <div class="lead">${I('arrowR','sm')} 문항 1 · ${EL[1].name}</div>`:''}
+  ${(d.stamps||[]).map(stmHTML).join('')}
  </div></div>
  <div class="dm-side"><div class="hd">채점</div><div class="bd"><div class="dm-q"><div class="qh">문항 1 <b>${total(sel)} / 10</b></div>
   ${EL.map((e,ei)=>`<div class="dm-el ${sel[ei]==null?'cur':''}" id="el${ei}"><div class="eh"><span>${e.name} <small>(${e.pt}점)</small></span><b>${sel[ei]==null?0:e.p[sel[ei]]}점</b></div>
@@ -78,7 +214,7 @@ function dmHTML(d){
    <button class="tmp" data-blocked="임시저장" ${done?'disabled':''}>${I('save','sm')} 임시저장</button>
    ${done?`<button class="tmp" id="btnAiView">${I('eye','sm')} AI 채점 확인</button><button class="done" disabled style="background:#16a34a">${I('check','sm')} 제출 완료</button><div class="lock-note">수준을 다시 고르면 수정할 수 있습니다 · 본채점 전체 완료 전까지</div>`:`<button class="done" id="btnDone" ${(sel.every(v=>v!=null)&&d.cmt.trim().length>=2)?'':'disabled'}>${I('send','sm')} 채점 완료</button>`}
   </div></div>
- <div class="dm-status"><span>${I('save','xs')} Auto-saved: ${done?'방금':'--:--:--'}</span><span>${I('hl','xs')} Annotations: ${d.cmtSaved?2:1}</span><span>${I('file','xs')} Role: 채점교사 · 1차 본채점</span></div></div>`;
+ <div class="dm-status"><span>${I('save','xs')} Auto-saved: ${done?'방금':'--:--:--'}</span><span>${I('hl','xs')} Annotations: ${(d.cmtSaved?2:1)+(d.stamps||[]).length}</span><span>${I('file','xs')} Role: 채점교사 · 1차 본채점</span></div></div>`;
 }
 
 function aiHTML(d){
@@ -96,8 +232,8 @@ function aiHTML(d){
 }
 
 function render(s){
- const d=s.data; document.getElementById('dmRoot').innerHTML=dmHTML(d);
- document.querySelectorAll('.dm-lv').forEach(b=>b.onclick=()=>{if(D.done){D.done=false;D.reedit=true;Demo.toast('채점을 수정합니다 · 다시 ‘채점 완료’를 눌러 주세요')}const ei=+b.dataset.el,li=+b.dataset.lv;D.sel[ei]=li;Demo.save();render(S);
+ const d=s.data; if(!d.stamps)d.stamps=[]; const _dc=document.querySelector('.dm-doc'),_sb=document.querySelector('.dm-side .bd'),_st=_dc?_dc.scrollTop:0,_ss=_sb?_sb.scrollTop:0; document.getElementById('dmRoot').innerHTML=dmHTML(d); document.querySelector('.dm-doc').scrollTop=_st; document.querySelector('.dm-side .bd').scrollTop=_ss; bindTools();
+ document.querySelectorAll('.dm-lv').forEach(b=>b.onclick=()=>{if(D.done){D.done=false;D.reedit=true;Demo.toast('채점을 수정합니다 · 다시 ‘채점 완료’를 눌러 주세요')}const ei=+b.dataset.el,li=+b.dataset.lv;D.sel[ei]=li;const q=D.stamps.find(q=>q.el===ei);if(q)q.val=EL[ei].p[li];actEl=ei;Demo.save();render(S);
   const n=D.sel.filter(v=>v!=null).length;if(!D.reedit)Demo.step(Math.min(4,1+n));const nx=D.sel.findIndex(v=>v==null);if(nx>=0)Demo.coach('#el'+nx);else if(!D.cmtSaved)Demo.coach('#cmt');else Demo.coach('#btnDone');});
  const c=document.getElementById('cmt');
  if(c){c.addEventListener('input',e=>{D.cmt=e.target.value;Demo.save();document.getElementById('btnDone').disabled=D.cmt.trim().length<2});Demo.onEnter(c,()=>{if(D.cmt.trim().length<2){Demo.toast('판단 근거를 입력해 주세요');return}Demo.step(5);c.blur()});}
@@ -107,7 +243,7 @@ function render(s){
 function openAI(){const m=document.getElementById('aiModal');m.innerHTML=aiHTML(D);m.style.display='grid';document.getElementById('aiClose').onclick=()=>{m.style.display='none';if(!S.finished)Demo.finish()}}
 
 Demo.init(Object.assign({},BOOTH_CFG,{home:'index.html',noShell:true,
- defaults:{sel:[null,null,null],cmt:'',cmtSaved:false,done:false},
+ defaults:{sel:[null,null,null],cmt:'',cmtSaved:false,done:false,stamps:[]},
  render:s=>{window.S=s;window.D=s.data;render(s)}
 }));
 const S=Demo.state, D=S.data;
